@@ -33,7 +33,7 @@ interface UseWebRTCProps {
   onLog?: (log: LogEntry) => void;
 }
 
-const CHUNK_SIZE = 16384; // 16KB chunks
+const CHUNK_SIZE = 8192; // 8KB chunks (reduced to avoid JSON size limits)
 const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 
 export function useWebRTC({
@@ -205,7 +205,7 @@ export function useWebRTC({
             port: 443,
             secure: true,
             path: "/",
-            timeout: 15000, // Increased timeout for first attempt
+            timeout: 5000, // Increased timeout for first attempt
           },
           {
             host: "1.peerjs.com",
@@ -286,7 +286,7 @@ export function useWebRTC({
                 log("info", "Attempting to connect to receiver...");
                 const conn = peer!.connect(sessionId, {
                   reliable: true,
-                  serialization: "json",
+                  serialization: "binary",
                 });
 
                 const connectTimeout = setTimeout(() => {
@@ -369,7 +369,21 @@ export function useWebRTC({
 
     conn.on("data", (data: unknown) => {
       resetTimeout();
-      handleIncomingData(data);
+
+      // Handle binary data from PeerJS
+      if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
+        // Convert binary data to JSON using TextDecoder
+        try {
+          const uint8Array = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+          const text = new TextDecoder().decode(uint8Array);
+          const jsonData = JSON.parse(text);
+          handleIncomingData(jsonData);
+        } catch (err) {
+          log("error", "Failed to parse binary data", String(err));
+        }
+      } else {
+        handleIncomingData(data);
+      }
     });
 
     conn.on("close", () => {
@@ -393,10 +407,14 @@ export function useWebRTC({
       setConnectionState("verifying");
       log("info", "Verification code generated", `Code: ${code}`);
 
-      conn.send({
+      // Send verification request as binary data
+      const message = {
         type: "verification-request",
         verificationCode: code,
-      });
+      };
+      const jsonString = JSON.stringify(message);
+      const binaryData = new TextEncoder().encode(jsonString);
+      conn.send(binaryData);
     } else {
       // Receiver waits for verification request
       setConnectionState("verifying");
@@ -758,9 +776,11 @@ export function useWebRTC({
               const fileBuffer = fileBuffersRef.current.get(fileId);
               if (fileBuffer) {
                 // Convert base64 to Uint8Array
-                const chunk = Uint8Array.from(atob(data.data), (c) =>
-                  c.charCodeAt(0)
-                );
+                const binaryString = atob(data.data);
+                const chunk = new Uint8Array(binaryString.length);
+                for (let j = 0; j < binaryString.length; j++) {
+                  chunk[j] = binaryString.charCodeAt(j);
+                }
                 fileBuffer.chunks[i] = chunk;
                 success = true;
 
@@ -810,14 +830,28 @@ export function useWebRTC({
         ).length;
 
         if (receivedChunks === totalChunks) {
-          const completeFile = new Blob(fileBuffer.chunks, {
+          // Filter out any undefined chunks and create Blob
+          const validChunks = fileBuffer.chunks.filter(chunk => chunk !== undefined);
+          if (validChunks.length !== totalChunks) {
+            log("error", `Missing chunks: expected ${totalChunks}, got ${validChunks.length}`);
+            return;
+          }
+
+          const completeFile = new Blob(validChunks, {
             type: fileBuffer.metadata.type,
           });
+
+          // Verify file size
+          if (completeFile.size !== fileBuffer.metadata.size) {
+            log("error", `File size mismatch: expected ${fileBuffer.metadata.size}, got ${completeFile.size}`);
+            return;
+          }
+
           onFileReceived?.(completeFile, {
             name: fileBuffer.metadata.name,
             type: fileBuffer.metadata.type,
           });
-          log("success", `Received: ${fileBuffer.metadata.name}`);
+          log("success", `Received: ${fileBuffer.metadata.name} (${completeFile.size} bytes)`);
 
           setFiles((prev) => {
             const allComplete = prev.every((f) => f.status === "completed");
@@ -1192,14 +1226,28 @@ export function useWebRTC({
         );
 
         if (receivedChunks === fileBuffer.metadata.totalChunks) {
-          const completeFile = new Blob(fileBuffer.chunks, {
+          // Filter out any undefined chunks and create Blob
+          const validChunks = fileBuffer.chunks.filter(chunk => chunk !== undefined);
+          if (validChunks.length !== fileBuffer.metadata.totalChunks) {
+            log("error", `Missing chunks: expected ${fileBuffer.metadata.totalChunks}, got ${validChunks.length}`);
+            return;
+          }
+
+          const completeFile = new Blob(validChunks, {
             type: fileBuffer.metadata.type,
           });
+
+          // Verify file size
+          if (completeFile.size !== fileBuffer.metadata.size) {
+            log("error", `File size mismatch: expected ${fileBuffer.metadata.size}, got ${completeFile.size}`);
+            return;
+          }
+
           onFileReceived?.(completeFile, {
             name: fileBuffer.metadata.name,
             type: fileBuffer.metadata.type,
           });
-          log("success", `Received: ${fileBuffer.metadata.name}`);
+          log("success", `Received: ${fileBuffer.metadata.name} (${completeFile.size} bytes)`);
 
           setFiles((prev) => {
             const allComplete = prev.every((f) => f.status === "completed");
@@ -1262,7 +1310,10 @@ export function useWebRTC({
           };
 
           if (currentStrategy === "webrtc-peerjs" && connectionRef.current) {
-            connectionRef.current.send(metadata);
+            // Send metadata as binary data
+            const jsonString = JSON.stringify(metadata);
+            const binaryData = new TextEncoder().encode(jsonString);
+            connectionRef.current.send(binaryData);
           } else if (
             currentStrategy === "webrtc-custom" &&
             dataChannelRef.current
@@ -1286,19 +1337,28 @@ export function useWebRTC({
 
           const arrayBuffer = await file.arrayBuffer();
           for (let i = 0; i < totalChunks; i++) {
+            // Add small delay between chunks to prevent overwhelming the connection
+            if (i > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1));
+            }
+
             const chunk = arrayBuffer.slice(
               i * CHUNK_SIZE,
               (i + 1) * CHUNK_SIZE
             );
-            const chunkData = {
-              type: "file-chunk",
-              fileId,
-              chunkIndex: i,
-              chunk,
-            };
-
             if (currentStrategy === "webrtc-peerjs" && connectionRef.current) {
-              connectionRef.current.send(chunkData);
+              // For PeerJS with binary serialization, send chunk data as binary
+              const chunkData = {
+                type: "file-chunk",
+                fileId,
+                chunkIndex: i,
+                chunk: Array.from(new Uint8Array(chunk)),
+              };
+
+              // Send as binary data to avoid JSON size limits
+              const jsonString = JSON.stringify(chunkData);
+              const binaryData = new TextEncoder().encode(jsonString);
+              connectionRef.current.send(binaryData);
             } else if (
               currentStrategy === "webrtc-custom" &&
               dataChannelRef.current
@@ -1317,8 +1377,9 @@ export function useWebRTC({
                 await new Promise((resolve) => setTimeout(resolve, 10));
               }
 
+              const uint8Array = new Uint8Array(chunk);
               const base64 = btoa(
-                String.fromCharCode(...new Uint8Array(chunk))
+                String.fromCharCode.apply(null, Array.from(uint8Array))
               );
               const chunkResponse = await fetch("/api/relay", {
                 method: "POST",

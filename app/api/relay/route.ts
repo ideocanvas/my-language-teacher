@@ -78,7 +78,11 @@ export async function POST(request: NextRequest) {
         const fileData = session.files.get(chunkFileId);
         if (fileData) {
           // Store chunk (convert base64 back to binary)
-          const chunkData = Uint8Array.from(atob(data.data), (c) => c.charCodeAt(0));
+          const binaryString = atob(data.data);
+          const chunkData = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            chunkData[i] = binaryString.charCodeAt(i);
+          }
           fileData.chunks.set(data.index, chunkData);
         }
         break;
@@ -140,7 +144,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Convert binary to base64 for JSON transport
-      const base64 = btoa(String.fromCharCode(...chunk));
+      const base64 = btoa(String.fromCharCode.apply(null, Array.from(chunk)));
       return NextResponse.json({ data: base64, index });
     }
 

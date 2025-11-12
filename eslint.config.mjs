@@ -47,6 +47,8 @@ const eslintConfig = [
         // Encoding globals
         atob: "readonly",
         btoa: "readonly",
+        TextEncoder: "readonly",
+        TextDecoder: "readonly",
         // Node.js types
         NodeJS: "readonly",
       },
