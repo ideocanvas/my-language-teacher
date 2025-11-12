@@ -120,3 +120,4 @@ node_modules/
 
 # open-nextsj
 .open-next
+.wrangler

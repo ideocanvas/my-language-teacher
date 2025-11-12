@@ -137,7 +137,6 @@ class PeerManager {
 
   private cleanup() {
     if (this.timeoutRef) clearTimeout(this.timeoutRef);
-    if (this.verificationTimeoutRef) clearTimeout(this.verificationTimeoutRef);
 
     if (this.connection) {
       this.connection.close();
@@ -684,15 +683,6 @@ class PeerManager {
       );
       this.error = null; // Clear any previous errors
 
-      // Set timeout to auto-verify if no response received
-      if (this.verificationTimeoutRef) clearTimeout(this.verificationTimeoutRef);
-      this.verificationTimeoutRef = setTimeout(() => {
-        if (!this.isVerified && this.connectionState === "verifying") {
-          this.log("warning", "Auto-verifying connection after timeout");
-          this.isVerified = true;
-          this.setConnectionState("connected");
-        }
-      }, 5000); // 5 second timeout
     }
 
     return true;

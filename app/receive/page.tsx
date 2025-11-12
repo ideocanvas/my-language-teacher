@@ -11,6 +11,7 @@ import PeerManager, { ConnectionState, FileTransfer } from "@/services/peer-mana
 
 export default function ReceivePage() {
   const [peerId, setPeerId] = useState<string>("");
+  const [shortCode, setShortCode] = useState<string>("");
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [receivedFiles, setReceivedFiles] = useState<Array<{ name: string; blob: Blob }>>([]);
   const [enteredCode, setEnteredCode] = useState<string>("");
@@ -56,6 +57,9 @@ export default function ReceivePage() {
         // Update peer ID when available
         if (managerState.peerId && !peerId) {
           setPeerId(managerState.peerId);
+          
+          // Register short code when peer ID is available
+          registerShortCode(managerState.peerId);
         }
       },
       onFileReceived: handleFileReceived,
@@ -66,6 +70,7 @@ export default function ReceivePage() {
     peerManager.connect("receiver", "").then((id) => {
       console.log("Receiver connected with peer ID:", id);
       setPeerId(id);
+      registerShortCode(id);
     }).catch((err) => {
       console.error("Failed to connect as receiver:", err);
       setError("Failed to initialize connection");
@@ -75,6 +80,27 @@ export default function ReceivePage() {
       unsubscribe();
     };
   }, []);
+
+  const registerShortCode = async (peerId: string) => {
+    try {
+      const response = await fetch("/api/codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ peerId }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setShortCode(data.shortCode);
+        handleLog({ timestamp: new Date(), level: "success", message: `Short code generated: ${data.shortCode}` });
+      } else {
+        handleLog({ timestamp: new Date(), level: "error", message: "Failed to generate short code", details: data.error });
+      }
+    } catch (err) {
+      handleLog({ timestamp: new Date(), level: "error", message: "Failed to register short code", details: String(err) });
+    }
+  };
 
   const handleVerificationSubmit = () => {
     if (enteredCode.trim().length === 6) {
@@ -88,7 +114,7 @@ export default function ReceivePage() {
     }
   }
 
-  const connectionUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/send?session=${peerId}`;
+  const connectionUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/send?session=${shortCode || peerId}`;
 
   const handleCopyLink = async () => {
     try {
@@ -186,7 +212,7 @@ export default function ReceivePage() {
                           </p>
                           <div className="bg-white border-2 border-blue-300 rounded-lg p-4 mb-3">
                             <p className="text-3xl font-bold text-center font-mono tracking-wider text-blue-600">
-                              {peerId ? peerId.toUpperCase() : "Connecting..."}
+                              {shortCode ? shortCode : (peerId ? "Generating..." : "Connecting...")}
                             </p>
                           </div>
                           <p className="text-xs text-gray-600 text-center">

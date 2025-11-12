@@ -79,6 +79,7 @@ const eslintConfig = [
         clearInterval: "readonly",
         atob: "readonly",
         btoa: "readonly",
+        process: "readonly",
         // WebRTC globals (for Cloudflare Workers)
         RTCPeerConnection: "readonly",
         RTCDataChannel: "readonly",
@@ -103,6 +104,7 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "off",
       "react-hooks/exhaustive-deps": "off",
       "no-case-declarations": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
     },
   },
   {

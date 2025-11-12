@@ -43,13 +43,36 @@ function SendPageContent() {
       onLog: handleLog,
     });
 
-    // Initialize connection as sender
-    peerManager.connect("sender", sessionId).then((id) => {
-      console.log("Sender connected with peer ID:", id);
-    }).catch((err) => {
-      console.error("Failed to connect as sender:", err);
-      setError("Failed to connect to receiver");
-    });
+    const connectWithShortCode = async () => {
+      try {
+        // Check if sessionId is a short code (6 characters alphanumeric)
+        if (sessionId.length === 6 && /^[A-Z0-9]{6}$/i.test(sessionId)) {
+          // Lookup peer ID from short code
+          handleLog({ timestamp: new Date(), level: "info", message: "Looking up peer ID from short code", details: `Code: ${sessionId}` });
+          const response = await fetch(`/api/codes?shortCode=${sessionId}`);
+          const data = await response.json();
+          
+          if (data.success) {
+            handleLog({ timestamp: new Date(), level: "success", message: "Found peer ID from short code", details: `Peer ID: ${data.peerId}` });
+            // Connect using the full peer ID
+            await peerManager.connect("sender", data.peerId);
+          } else {
+            handleLog({ timestamp: new Date(), level: "error", message: "Failed to lookup short code", details: data.error });
+            setError("Invalid connection code - please check and try again");
+            return;
+          }
+        } else {
+          // Assume it's a full peer ID (backward compatibility)
+          handleLog({ timestamp: new Date(), level: "info", message: "Using direct peer ID connection" });
+          await peerManager.connect("sender", sessionId);
+        }
+      } catch (err) {
+        console.error("Failed to connect as sender:", err);
+        setError("Failed to connect to receiver");
+      }
+    };
+
+    connectWithShortCode();
 
     return () => {
       unsubscribe();
