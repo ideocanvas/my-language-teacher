@@ -386,6 +386,18 @@ class PeerManager {
           }
         }
       }
+    } else if (dataObj.type === "text-content") {
+      // Handle incoming text content
+      const { content } = dataObj as {
+        content: string;
+      };
+
+      if (content && this.isVerified) {
+        this.callbacks.forEach(cb => cb.onTextReceived?.(content));
+        this.log("success", "Text content received", `${content.length} characters`);
+      } else if (!this.isVerified) {
+        this.log("error", "Text content received before verification");
+      }
     }
   }
 

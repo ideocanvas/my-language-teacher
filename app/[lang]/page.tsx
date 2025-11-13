@@ -110,6 +110,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
         }
       },
       onLog: handleLog,
+      onTextReceived: handleTextReceived,
     });
 
     // Check if we have a session parameter (coming from QR code scan)
@@ -229,8 +230,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
 
     try {
       const peerManager = PeerManager.getInstance();
-      // For now, we'll use sendFiles as a workaround until we update peer manager
-      // await peerManager.sendText(textContent);
+      await peerManager.sendText(textContent);
 
       // Add to local history
       const newItem: ClipboardItem = {
