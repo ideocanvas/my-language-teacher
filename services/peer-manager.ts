@@ -40,14 +40,14 @@ class PeerManager {
   private role: 'sender' | 'receiver' = 'sender';
   private callbacks: PeerManagerCallbacks[] = [];
   private peerId: string | null = null;
-  
+
   // State management
   private connectionState: ConnectionState = "waiting";
   private files: FileTransfer[] = [];
   private error: string | null = null;
   private verificationCode: string | null = null;
   private isVerified: boolean = false;
-  
+
   // Refs for cleanup
   private timeoutRef: NodeJS.Timeout | null = null;
   private verificationTimeoutRef: NodeJS.Timeout | null = null;
@@ -81,12 +81,12 @@ class PeerManager {
       secure: true,
       path: "/",
     });
-    
+
     this.peer.on('open', (id) => {
       console.log('Global Peer instance ready with ID:', id);
       this.peerId = id;
     });
-    
+
     this.peer.on('error', (err) => {
       console.error('Global Peer error:', err);
     });
@@ -94,10 +94,10 @@ class PeerManager {
 
   subscribe(callbacks: PeerManagerCallbacks): () => void {
     this.callbacks.push(callbacks);
-    
+
     // Immediately notify of current state
     callbacks.onConnectionStateChange(this.connectionState);
-    
+
     return () => {
       this.callbacks = this.callbacks.filter(cb => cb !== callbacks);
     };
@@ -115,7 +115,7 @@ class PeerManager {
       message,
       details,
     };
-    
+
     this.callbacks.forEach(cb => cb.onLog?.(entry));
     console.log(`[${level.toUpperCase()}] ${message}`, details || "");
   }
@@ -305,7 +305,7 @@ class PeerManager {
         fileType: string;
         totalChunks: number;
       };
-      
+
       this.fileBuffers.set(id, {
         chunks: new Array(totalChunks),
         metadata: { name, size, type: fileType, totalChunks },
@@ -510,7 +510,7 @@ class PeerManager {
             this.setupPeerJSConnection(conn);
             resolve(this.peerId!);
           };
-          
+
           peer.on("connection", connectionHandler);
         }
       } catch (err) {
@@ -589,7 +589,7 @@ class PeerManager {
               i * CHUNK_SIZE,
               (i + 1) * CHUNK_SIZE
             );
-            
+
             // For PeerJS with binary serialization, send chunk data as binary
             const chunkData = {
               type: "file-chunk",
@@ -606,7 +606,7 @@ class PeerManager {
             }
 
             const progress = ((i + 1) / totalChunks) * 100;
-            
+
             // Update file progress
             this.files = this.files.map((f) =>
               f.id === fileId
@@ -629,7 +629,7 @@ class PeerManager {
           }
         } catch (fileErr) {
           this.log("error", `Failed to send: ${file.name}`, String(fileErr));
-          
+
           // Update file status to error
           this.files = this.files.map((f) =>
             f.id === fileId
@@ -644,7 +644,7 @@ class PeerManager {
     } catch (err) {
       this.log("error", "Transfer failed", String(err));
       this.error = "Failed to send files";
-      
+
       // Mark all transferring files as error
       this.files = this.files.map((f) =>
         f.status === "transferring" ? { ...f, status: "error" } : f
