@@ -86,3 +86,22 @@ export interface WebRTCHookReturn {
   isConnected: boolean
   error?: string
 }
+
+export interface ClipboardHistoryItem {
+  id: string;
+  type: 'text' | 'image' | 'file' | 'html' | 'code' | 'url' | 'contact' | 'rich-text';
+  content: string;
+  data?: Blob;
+  mimeType?: string;
+  fileName?: string;
+  fileSize?: number;
+  timestamp: number;
+  isLocal: boolean;
+  previewUrl?: string;
+  metadata?: {
+    language?: string; // For code snippets
+    url?: string; // For URLs
+    format?: string; // For rich text formatting
+    dimensions?: { width: number; height: number }; // For images
+  };
+}

@@ -52,6 +52,16 @@ const eslintConfig = [
         TextDecoder: "readonly",
         // Node.js types
         NodeJS: "readonly",
+        // IndexedDB globals
+        indexedDB: "readonly",
+        IDBDatabase: "readonly",
+        IDBTransaction: "readonly",
+        IDBObjectStore: "readonly",
+        IDBIndex: "readonly",
+        IDBKeyRange: "readonly",
+        IDBCursor: "readonly",
+        IDBOpenDBRequest: "readonly",
+        IDBRequest: "readonly",
       },
     },
     plugins: {

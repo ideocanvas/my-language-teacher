@@ -1,24 +1,21 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { ArrowUpDown, ClipboardPaste, ClipboardCopy, Shield, Zap, Users, Copy, Trash2, X, Send } from "lucide-react";
-import { QRCodeGenerator } from "@/components/qr-code-generator";
-import { ConnectionStatus } from "@/components/connection-status";
-import { ConnectionLogger, LogEntry } from "@/components/connection-logger";
-import { toast } from "sonner";
-import PeerManager, { ConnectionState } from "@/services/peer-manager";
-import { LanguageSwitcher } from "@/components/language-switcher";
-import { getTranslations } from "@/lib/client-i18n";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
-
-interface ClipboardItem {
-  id: string;
-  content: string;
-  timestamp: number;
-  isLocal: boolean;
-}
+import { ClipboardHistoryItem as ClipboardHistoryItemComponent } from "@/components/clipboard-history-item";
+import { ConnectionLogger, LogEntry } from "@/components/connection-logger";
+import { ConnectionStatus } from "@/components/connection-status";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { QRCodeGenerator } from "@/components/qr-code-generator";
+import { getTranslations } from "@/lib/client-i18n";
+import { createClipboardHistoryItem, detectContentType } from "@/lib/clipboard-utils";
+import { indexedDBStorage } from "@/lib/indexed-db";
+import { ClipboardHistoryItem as ClipboardHistoryItemType } from "@/lib/types";
+import PeerManager, { ConnectionState } from "@/services/peer-manager";
+import { ArrowUpDown, ClipboardPaste, Copy, Send, Trash2, Users } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function ClipboardPage({ params }: { params: Promise<{ lang: string }> }) {
   const [lang, setLang] = useState<"en" | "zh">("en");
@@ -34,8 +31,9 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
   const [isVerified, setIsVerified] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [textContent, setTextContent] = useState<string>("");
-  const [clipboardHistory, setClipboardHistory] = useState<ClipboardItem[]>([]);
+  const [clipboardHistory, setClipboardHistory] = useState<ClipboardHistoryItemType[]>([]);
   const [manualCode, setManualCode] = useState<string>("");
+  const [isDragOver, setIsDragOver] = useState(false);
   const searchParams = useSearchParams();
 
   const handleLog = (log: LogEntry) => {
@@ -43,8 +41,9 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
   };
 
   const handleTextReceived = (text: string) => {
-    const newItem: ClipboardItem = {
+    const newItem: ClipboardHistoryItemType = {
       id: `${Date.now()}-${Math.random()}`,
+      type: 'text',
       content: text,
       timestamp: Date.now(),
       isLocal: false
@@ -55,18 +54,86 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
     toast.success(`${t("clipboard.contentReceived")}: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
   };
 
-  const saveClipboardHistory = (history: ClipboardItem[]) => {
+  const handleFileReceived = (file: Blob, metadata: { name: string; type: string }) => {
+    const fileType = metadata.type.startsWith('image/') ? 'image' : 'file';
+    const previewUrl = metadata.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+
+    const newItem: ClipboardHistoryItemType = {
+      id: `${Date.now()}-${Math.random()}`,
+      type: fileType,
+      content: `${fileType === 'image' ? 'Image' : 'File'}: ${metadata.name}`,
+      data: file,
+      mimeType: metadata.type,
+      fileName: metadata.name,
+      fileSize: file.size,
+      timestamp: Date.now(),
+      isLocal: false,
+      previewUrl
+    };
+
+    setClipboardHistory(prev => [newItem, ...prev]);
+    saveClipboardHistory([newItem, ...clipboardHistory]);
+    toast.success(`${t("clipboard.contentReceived")}: ${metadata.name}`);
+  };
+
+  const saveClipboardHistory = async (history: ClipboardHistoryItemType[]) => {
     try {
-      localStorage.setItem('p2p-clipboard-history', JSON.stringify(history));
+      // Store file data in IndexedDB and metadata in localStorage
+      const fileItems = history.filter(item => item.type === 'image' || item.type === 'file');
+      const nonFileItems = history.filter(item => item.type !== 'image' && item.type !== 'file');
+
+      // Store file data in IndexedDB
+      for (const item of fileItems) {
+        if (item.data && item.data instanceof File) {
+          await indexedDBStorage.storeFile(item.id, item.data);
+        }
+      }
+
+      // Store metadata in localStorage (without file data)
+      const serializableHistory = history.map(item => {
+        const serializedItem = { ...item };
+        // Remove previewUrl as it's not serializable
+        delete serializedItem.previewUrl;
+        // Remove data (Blob) as it's not serializable
+        delete serializedItem.data;
+        return serializedItem;
+      });
+      localStorage.setItem('p2p-clipboard-history', JSON.stringify(serializableHistory));
     } catch (err) {
       console.error('Failed to save clipboard history:', err);
     }
   };
 
-  const loadClipboardHistory = (): ClipboardItem[] => {
+  const loadClipboardHistory = async (): Promise<ClipboardHistoryItemType[]> => {
     try {
       const saved = localStorage.getItem('p2p-clipboard-history');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+
+      const history: ClipboardHistoryItemType[] = JSON.parse(saved);
+
+      // Load file data from IndexedDB for file/image items
+      const loadedHistory = await Promise.all(
+        history.map(async (item) => {
+          if (item.type === 'image' || item.type === 'file') {
+            try {
+              const file = await indexedDBStorage.getFile(item.id);
+              if (file) {
+                const previewUrl = item.type === 'image' ? URL.createObjectURL(file) : undefined;
+                return {
+                  ...item,
+                  data: file,
+                  previewUrl
+                };
+              }
+            } catch (err) {
+              console.error(`Failed to load file ${item.id}:`, err);
+            }
+          }
+          return item;
+        })
+      );
+
+      return loadedHistory;
     } catch (err) {
       console.error('Failed to load clipboard history:', err);
       return [];
@@ -74,7 +141,11 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
   };
 
   useEffect(() => {
-    setClipboardHistory(loadClipboardHistory());
+    const loadHistory = async () => {
+      const history = await loadClipboardHistory();
+      setClipboardHistory(history);
+    };
+    loadHistory();
   }, []);
 
   useEffect(() => {
@@ -111,6 +182,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
       },
       onLog: handleLog,
       onTextReceived: handleTextReceived,
+      onFileReceived: handleFileReceived,
     });
 
     // Check if we have a session parameter (coming from QR code scan)
@@ -233,15 +305,17 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
       await peerManager.sendText(textContent);
 
       // Add to local history
-      const newItem: ClipboardItem = {
+      const newItem: ClipboardHistoryItemType = {
         id: `${Date.now()}-${Math.random()}`,
+        type: 'text',
         content: textContent,
         timestamp: Date.now(),
         isLocal: true
       };
 
-      setClipboardHistory(prev => [newItem, ...prev]);
-      saveClipboardHistory([newItem, ...clipboardHistory]);
+      const newHistory = [newItem, ...clipboardHistory];
+      setClipboardHistory(newHistory);
+      saveClipboardHistory(newHistory);
       setTextContent("");
       toast.success(t("clipboard.contentSent"));
       handleLog({ timestamp: new Date(), level: "success", message: "Content shared successfully" });
@@ -252,33 +326,295 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
     }
   };
 
-  const handlePasteFromClipboard = async () => {
+  const handleClearText = () => {
+    setTextContent("");
+  };
+
+  const handlePasteFromClipboard = async (event?: React.ClipboardEvent) => {
+    // Always prevent default and stop propagation to handle paste ourselves
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      console.log("event", event);
+    }
+
     try {
-      const clipboardText = await navigator.clipboard.readText();
-      setTextContent(clipboardText);
-      handleLog({ timestamp: new Date(), level: "info", message: "Text pasted from clipboard" });
+      // Use the traditional clipboardData approach which has better browser support
+      const clipboardData = event?.clipboardData;
+
+      if (!clipboardData) {
+        // Fallback to text-only API
+        try {
+          const clipboardText = await navigator.clipboard.readText();
+          if (clipboardText) {
+            setTextContent(clipboardText);
+            handleLog({ timestamp: new Date(), level: "info", message: "Text pasted from clipboard (fallback to readText)" });
+          } else {
+            setError("No text content found in clipboard");
+          }
+        } catch (fallbackErr) {
+          setError("Clipboard access not supported");
+          handleLog({ timestamp: new Date(), level: "error", message: "Clipboard access failed", details: String(fallbackErr) });
+        }
+        return;
+      }
+
+      let foundContent = false;
+
+      // Use the utility function to detect content type
+      const detectedContent = detectContentType(clipboardData);
+
+      if (detectedContent) {
+        // Create history item using utility function
+        const newItem = createClipboardHistoryItem(
+          detectedContent.type,
+          detectedContent.content,
+          detectedContent.file,
+          true
+        );
+
+        // Handle file sending if connected
+        if ((detectedContent.type === 'image' || detectedContent.type === 'file') &&
+            connectionState === "connected" && detectedContent.file) {
+          try {
+            const peerManager = PeerManager.getInstance();
+            await peerManager.sendFiles([detectedContent.file]);
+            handleLog({
+              timestamp: new Date(),
+              level: "info",
+              message: `${detectedContent.type} sent to connected device`
+            });
+          } catch (sendErr) {
+            handleLog({
+              timestamp: new Date(),
+              level: "error",
+              message: "Failed to send file",
+              details: String(sendErr)
+            });
+          }
+        }
+
+        // Add to history
+        const newHistory = [newItem, ...clipboardHistory];
+        setClipboardHistory(newHistory);
+        saveClipboardHistory(newHistory);
+
+        // For text content, also show in textarea (unless it's HTML)
+        if (detectedContent.type === 'text') {
+          setTextContent(detectedContent.content);
+        }
+
+        handleLog({
+          timestamp: new Date(),
+          level: "info",
+          message: `${detectedContent.type} content pasted from clipboard`,
+          details: detectedContent.type === 'file' || detectedContent.type === 'image'
+            ? `Type: ${detectedContent.file?.type}, Size: ${detectedContent.file?.size} bytes, Name: ${detectedContent.file?.name || 'unnamed'}`
+            : undefined
+        });
+
+        foundContent = true;
+      }
+
+      // If we found and processed content, we're done
+      if (foundContent) return;
+
+      if (!foundContent) {
+        setError("No supported content found in clipboard");
+        handleLog({ timestamp: new Date(), level: "warning", message: "No supported content found in clipboard" });
+      }
     } catch (err) {
-      setError("Failed to read from clipboard");
-      handleLog({ timestamp: new Date(), level: "error", message: "Failed to read from clipboard", details: String(err) });
+      setError("Failed to process clipboard content");
+      handleLog({ timestamp: new Date(), level: "error", message: "Failed to process clipboard content", details: String(err) });
     }
   };
 
-  const handleCopyToClipboard = async (content: string) => {
+  const handleCopyToClipboard = async (item: ClipboardHistoryItemType) => {
     try {
-      await navigator.clipboard.writeText(content);
-      toast.success(t("common.copied"));
+      switch (item.type) {
+        case 'text':
+        case 'html':
+        case 'code':
+        case 'url':
+        case 'contact':
+        case 'rich-text':
+          await navigator.clipboard.writeText(item.content);
+          toast.success(t("common.copied"));
+          break;
+        case 'image':
+        case 'file':
+          if (item.data) {
+            // Ensure we have a proper Blob for clipboard operations
+            let blob: Blob;
+            if (item.data instanceof Blob) {
+              blob = item.data;
+            } else {
+              // If data is not a Blob, create one from the stored data
+              blob = new Blob([item.data], { type: item.mimeType || 'application/octet-stream' });
+            }
+
+            const clipboardItem = new globalThis.ClipboardItem({
+              [item.mimeType || 'application/octet-stream']: blob
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            toast.success(`${item.type === 'image' ? 'Image' : 'File'} copied to clipboard`);
+          } else {
+            toast.error("No file data available to copy");
+          }
+          break;
+        default:
+          toast.error("Unsupported content type");
+      }
     } catch (err) {
+      console.error("Failed to copy to clipboard", err);
       toast.error("Failed to copy to clipboard");
     }
   };
 
-  const handleDeleteItem = (id: string) => {
+  const handleSendItem = async (item: ClipboardHistoryItemType) => {
+    if (connectionState !== "connected") {
+      toast.error("No active connection");
+      return;
+    }
+
+    try {
+      const peerManager = PeerManager.getInstance();
+
+      switch (item.type) {
+        case 'text':
+        case 'html':
+        case 'code':
+        case 'url':
+        case 'contact':
+        case 'rich-text':
+          await peerManager.sendText(item.content);
+          toast.success("Content sent");
+          break;
+        case 'image':
+        case 'file':
+          if (item.data) {
+            const file = item.data instanceof File ? item.data : new File([item.data], item.fileName || 'file', { type: item.mimeType });
+            await peerManager.sendFiles([file]);
+            toast.success(`${item.type === 'image' ? 'Image' : 'File'} sent`);
+          } else {
+            toast.error("No file data available to send");
+          }
+          break;
+        default:
+          toast.error("Unsupported content type");
+      }
+
+      handleLog({ timestamp: new Date(), level: "success", message: "Content sent to peer" });
+    } catch (err) {
+      console.error('Send failed:', err);
+      toast.error("Failed to send content");
+      handleLog({ timestamp: new Date(), level: "error", message: "Failed to send content", details: String(err) });
+    }
+  };
+
+  const handleDownloadFile = async (item: ClipboardHistoryItemType) => {
+    if (!item.data) return;
+
+    try {
+      const url = URL.createObjectURL(item.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = item.fileName || `download-${item.id}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("File downloaded");
+    } catch (err) {
+      toast.error("Failed to download file");
+    }
+  };
+
+  const handleFileDrop = async (files: globalThis.FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    if (connectionState !== "connected") {
+      setError("No active connection. Please verify the connection first.");
+      return;
+    }
+
+    try {
+      const peerManager = PeerManager.getInstance();
+      const fileArray = Array.from(files);
+
+      // Filter for supported file types
+      const supportedFiles = fileArray.filter(file =>
+        file.type.startsWith('image/') ||
+        file.type.startsWith('text/') ||
+        file.size < 50 * 1024 * 1024 // Limit to 50MB
+      );
+
+      if (supportedFiles.length === 0) {
+        setError("No supported files found. Please select images or smaller files.");
+        return;
+      }
+
+      await peerManager.sendFiles(supportedFiles);
+
+      // Add files to local history
+      const newItems = supportedFiles.map(file => {
+        const isImage = file.type.startsWith('image/');
+        const previewUrl = isImage ? URL.createObjectURL(file) : undefined;
+
+        return {
+          id: `${Date.now()}-${Math.random()}`,
+          type: isImage ? 'image' : 'file',
+          content: `${isImage ? 'Image' : 'File'}: ${file.name}`,
+          data: file,
+          mimeType: file.type,
+          fileName: file.name,
+          fileSize: file.size,
+          timestamp: Date.now(),
+          isLocal: true,
+          previewUrl
+        } as ClipboardHistoryItemType;
+      });
+
+      const newHistory = [...newItems, ...clipboardHistory];
+      setClipboardHistory(newHistory);
+      saveClipboardHistory(newHistory);
+
+      handleLog({ timestamp: new Date(), level: "success", message: `${supportedFiles.length} file(s) sent` });
+    } catch (err) {
+      setError("Failed to send files");
+      handleLog({ timestamp: new Date(), level: "error", message: "Failed to send files", details: String(err) });
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    const itemToDelete = clipboardHistory.find(item => item.id === id);
+    if (itemToDelete && (itemToDelete.type === 'image' || itemToDelete.type === 'file')) {
+      try {
+        await indexedDBStorage.deleteFile(id);
+      } catch (err) {
+        console.error(`Failed to delete file ${id} from IndexedDB:`, err);
+      }
+    }
+
     const newHistory = clipboardHistory.filter(item => item.id !== id);
     setClipboardHistory(newHistory);
     saveClipboardHistory(newHistory);
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
+    // Delete all files from IndexedDB
+    try {
+      const fileIds = clipboardHistory
+        .filter(item => item.type === 'image' || item.type === 'file')
+        .map(item => item.id);
+
+      for (const id of fileIds) {
+        await indexedDBStorage.deleteFile(id);
+      }
+    } catch (err) {
+      console.error('Failed to clear files from IndexedDB:', err);
+    }
+
     setClipboardHistory([]);
     saveClipboardHistory([]);
   };
@@ -535,20 +871,29 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
               <div className="mb-6">
                 <div className="border-2 border-gray-300 rounded-lg p-4">
                   <textarea
-                    value={textContent}
-                    onChange={(e) => setTextContent(e.target.value)}
-                    placeholder={t("clipboard.textPlaceholder")}
-                    className="w-full h-32 p-3 border-none resize-none focus:outline-none focus:ring-0"
-                    disabled={connectionState !== "connected"}
-                  />
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  onPaste={(e) => handlePasteFromClipboard(e)}
+                  placeholder={t("clipboard.textPlaceholder")}
+                  className="w-full h-32 p-3 border-none resize-none focus:outline-none focus:ring-0"
+                />
                   <div className="flex justify-between items-center mt-2">
-                    <button
-                      onClick={handlePasteFromClipboard}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                      disabled={connectionState !== "connected"}
-                    >
-                      {t("clipboard.pasteTextHere")}
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handlePasteFromClipboard()}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        {t("clipboard.pasteTextHere")}
+                      </button>
+                      {textContent && (
+                        <button
+                          onClick={handleClearText}
+                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        >
+                          {t("clipboard.clearText")}
+                        </button>
+                      )}
+                    </div>
                     <span className="text-sm text-gray-500">
                       {textContent.length} characters
                     </span>
@@ -582,38 +927,14 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
                 ) : (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
                     {clipboardHistory.map((item) => (
-                      <div
+                      <ClipboardHistoryItemComponent
                         key={item.id}
-                        className={`border rounded-lg p-4 ${
-                          item.isLocal ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-xs text-gray-500">
-                            {new Date(item.timestamp).toLocaleString()}
-                            {item.isLocal ? ' (Sent)' : ' (Received)'}
-                          </span>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleCopyToClipboard(item.content)}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Copy"
-                            >
-                              <Copy className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Delete"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {item.content}
-                        </p>
-                      </div>
+                        item={item}
+                        connectionState={connectionState}
+                        onDelete={handleDeleteItem}
+                        onSend={handleSendItem}
+                        t={t}
+                      />
                     ))}
                   </div>
                 )}
