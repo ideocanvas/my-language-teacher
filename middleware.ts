@@ -21,11 +21,11 @@ function getLocale(request: NextRequest) {
   // Check Accept-Language header
   const acceptLanguage = request.headers.get('accept-language')
   console.log('🔍 Middleware Debug - Accept-Language:', acceptLanguage)
-  
+
   if (acceptLanguage) {
     const preferredLocale = acceptLanguage.split(',')[0].split('-')[0]
     console.log('🔍 Middleware Debug - Preferred locale from header:', preferredLocale)
-    
+
     if (locales.includes(preferredLocale as any)) {
       console.log('🔍 Middleware Debug - Using preferred locale from header:', preferredLocale)
       return preferredLocale
@@ -50,7 +50,7 @@ export function middleware(request: NextRequest) {
   // Redirect if there is no locale
   if (pathnameIsMissingLocale) {
     const locale = getLocale(request)
-    
+
     console.log('🔄 Middleware Debug - Redirecting to locale:', locale)
     console.log('🔄 Middleware Debug - New URL will be:', `/${locale}${pathname}`)
 
@@ -68,6 +68,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip all internal paths (_next)
-    '/((?!_next|api|favicon.ico|robots.txt).*)',
+    '/((?!_next|api|favicon.ico|robots.txt|_next/static|_next/image|.*\\.png$|.*\\.svg$).*)',
   ],
 }

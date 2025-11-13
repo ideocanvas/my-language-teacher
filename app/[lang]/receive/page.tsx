@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import PeerManager, { ConnectionState, FileTransfer } from "@/services/peer-manager";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { getTranslations } from "@/lib/client-i18n";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 
 export default function ReceivePage({ params }: { params: Promise<{ lang: string }> }) {
   const [lang, setLang] = useState<"en" | "zh">("en");
@@ -371,6 +372,8 @@ export default function ReceivePage({ params }: { params: Promise<{ lang: string
             <ConnectionLogger logs={logs} maxHeight="600px" />
           </div>
         </div>
+        
+        <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
       </main>
     </div>
   );

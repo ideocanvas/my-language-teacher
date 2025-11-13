@@ -2,6 +2,7 @@ import { ArrowUpDown, Download, Upload, Shield, Zap, Users } from 'lucide-react'
 import Link from 'next/link'
 import { getDictionary, Locale } from '@/lib/i18n'
 import { LanguageSwitcher } from '@/components/language-switcher'
+import BuyMeACoffee from '@/components/BuyMeACoffee'
 
 export default async function HomePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
@@ -101,6 +102,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           </div>
         </div>
       </main>
+      
+      <BuyMeACoffee language={lang as 'en' | 'zh-TW'} />
     </div>
   )
 }

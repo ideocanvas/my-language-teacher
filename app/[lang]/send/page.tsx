@@ -9,6 +9,7 @@ import { ConnectionLogger, LogEntry } from "@/components/connection-logger";
 import PeerManager, { ConnectionState, FileTransfer } from "@/services/peer-manager";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { getTranslations } from "@/lib/client-i18n";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 
 function SendPageContent() {
   const searchParams = useSearchParams();
@@ -310,6 +311,8 @@ export default async function SendPage({ params }: { params: Promise<{ lang: str
         <Suspense fallback={<div>{t("common.loading")}</div>}>
           <SendPageContent />
         </Suspense>
+        
+        <BuyMeACoffee language={validLang === "zh" ? "zh-TW" : "en"} />
       </main>
     </div>
   );
