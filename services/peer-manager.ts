@@ -26,7 +26,7 @@ export interface FileTransfer {
 interface PeerManagerCallbacks {
   onConnectionStateChange: (state: ConnectionState) => void;
   onFileReceived?: (file: Blob, metadata: { name: string; type: string }) => void;
-  onTextReceived?: (text: string) => void;
+  onTextReceived?: (text: string, contentType?: string) => void;
   onLog?: (log: LogEntry) => void;
 }
 
@@ -144,6 +144,12 @@ class PeerManager {
       this.connection = null;
     }
 
+    // Reset state for new connection
+    this.verificationCode = null;
+    this.isVerified = false;
+    this.error = null;
+    this.files = [];
+
     // Don't destroy the global peer instance, just close the connection
     this.fileBuffers.clear();
   }
@@ -220,12 +226,16 @@ class PeerManager {
   }
 
   private handleIncomingData(data: unknown) {
+    this.log(
+          "info",
+          "Incoming data..."
+        );
     if (typeof data !== "object" || data === null) return;
 
     const dataObj = data as Record<string, unknown>;
 
     if (dataObj.type === "verification-request") {
-      // Receiver receives verification code from sender
+      // Only receiver should process verification request and show the code
       if (this.role === "receiver") {
         this.verificationCode = dataObj.verificationCode as string;
         this.log(
@@ -233,6 +243,9 @@ class PeerManager {
           "Verification code received",
           `Waiting for user to confirm`
         );
+      } else {
+        // Sender should not set verification code when receiving request (this should not happen)
+        this.verificationCode = null;
       }
     } else if (dataObj.type === "verification-response") {
       // Sender receives verification response from receiver
@@ -322,7 +335,7 @@ class PeerManager {
       this.log(
         "info",
         `Receiving: ${name}`,
-        `${(size / 1024 / 1024).toFixed(2)} MB`
+        `${(size / 1024 / 1024).toFixed(2)} MB, ${totalChunks} chunks`
       );
     } else if (dataObj.type === "file-chunk") {
       // Only receiver should process file chunks
@@ -344,6 +357,12 @@ class PeerManager {
         const progress =
           (receivedChunks / fileBuffer.metadata.totalChunks) * 100;
 
+        // Log chunk progress for debugging
+        if (receivedChunks % 10 === 0 || receivedChunks === fileBuffer.metadata.totalChunks) {
+          this.log("info", `File chunk progress: ${fileBuffer.metadata.name}`,
+            `${receivedChunks}/${fileBuffer.metadata.totalChunks} chunks (${progress.toFixed(1)}%)`);
+        }
+
         // Update file progress
         this.files = this.files.map((f) =>
           f.id === fileId
@@ -363,7 +382,9 @@ class PeerManager {
             return;
           }
 
-          const completeFile = new Blob(validChunks, {
+          // Ensure chunks are in correct order
+          const orderedChunks = fileBuffer.chunks.filter(chunk => chunk !== undefined);
+          const completeFile = new Blob(orderedChunks, {
             type: fileBuffer.metadata.type,
           });
 
@@ -379,6 +400,9 @@ class PeerManager {
           }));
           this.log("success", `Received: ${fileBuffer.metadata.name} (${completeFile.size} bytes)`);
 
+          // Clean up file buffer after successful transfer
+          this.fileBuffers.delete(fileId);
+
           // Check if all files are complete
           const allComplete = this.files.every((f) => f.status === "completed");
           if (allComplete) {
@@ -388,13 +412,14 @@ class PeerManager {
       }
     } else if (dataObj.type === "text-content") {
       // Handle incoming text content
-      const { content } = dataObj as {
+      const { content, contentType } = dataObj as {
         content: string;
+        contentType?: string;
       };
 
       if (content && this.isVerified) {
-        this.callbacks.forEach(cb => cb.onTextReceived?.(content));
-        this.log("success", "Text content received", `${content.length} characters`);
+        this.callbacks.forEach(cb => cb.onTextReceived?.(content, contentType));
+        this.log("success", "Text content received", `${content.length} characters, type: ${contentType || 'text'}`);
       } else if (!this.isVerified) {
         this.log("error", "Text content received before verification");
       }
@@ -665,7 +690,7 @@ class PeerManager {
     }
   }
 
-  async sendText(text: string): Promise<void> {
+  async sendText(text: string, contentType: string = 'text'): Promise<void> {
     if (this.connectionState !== "connected") {
       this.error = "No active connection. Please verify the connection first.";
       return;
@@ -683,6 +708,7 @@ class PeerManager {
       const textData = {
         type: "text-content",
         content: text,
+        contentType: contentType,
         timestamp: Date.now(),
       };
 

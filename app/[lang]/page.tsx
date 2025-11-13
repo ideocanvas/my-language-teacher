@@ -40,10 +40,10 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
     setLogs((prev) => [...prev, log]);
   };
 
-  const handleTextReceived = (text: string) => {
+  const handleTextReceived = (text: string, contentType: string = 'text') => {
     const newItem: ClipboardHistoryItemType = {
       id: `${Date.now()}-${Math.random()}`,
-      type: 'text',
+      type: contentType as ClipboardHistoryItemType['type'],
       content: text,
       timestamp: Date.now(),
       isLocal: false
@@ -165,6 +165,11 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
     const unsubscribe = peerManager.subscribe({
       onConnectionStateChange: (state: ConnectionState) => {
         setConnectionState(state);
+
+        // Clear entered code when starting verification
+        if (state === "verifying") {
+          setEnteredCode("");
+        }
 
         // Update other state from peer manager
         const managerState = peerManager.getState();
@@ -487,7 +492,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
         case 'url':
         case 'contact':
         case 'rich-text':
-          await peerManager.sendText(item.content);
+          await peerManager.sendText(item.content, item.type);
           toast.success("Content sent");
           break;
         case 'image':
@@ -761,8 +766,9 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
                 </div>
               )}
 
-              {/* Verifying - Sender (generated QR code) shows verification code display */}
-              {connectionState === "verifying" && verificationCode && (
+              {/* Verifying - Sender (scanned QR code) shows verification code display */}
+              {/* Only show verification code on sender side when there's a session ID (scanning device) */}
+              {connectionState === "verifying" && verificationCode && searchParams?.get("session") && (
                 <div className="text-center">
                   <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">
@@ -787,8 +793,9 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
                 </div>
               )}
 
-              {/* Verifying - Receiver (connected via QR code) shows verification input */}
-              {connectionState === "verifying" && !verificationCode && (
+              {/* Verifying - Receiver (generated QR code) shows verification input */}
+              {/* Show verification input on receiver side when there's no session ID */}
+              {connectionState === "verifying" && !searchParams?.get("session") && (
                 <div className="text-center">
                   <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">
