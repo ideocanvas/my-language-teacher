@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "P2P Clipboard - Share Clipboard Content Instantly",
-    "description": "Share text and clipboard content directly between devices. Both devices can send and receive content with full history management."
+    "title": "My Language Teacher",
+    "description": "Learn languages through real-time content sharing and collaboration."
   },
   "common": {
     "backToHome": "Back to Home",
@@ -31,7 +31,7 @@
     "waitingForConnection": "Waiting for connection..."
   },
   "home": {
-    "title": "P2P Clipboard",
+    "title": "My Language Teacher",
     "heroTitle": "Share Clipboard Content Instantly",
     "heroDescription": "Connect devices to share clipboard content bidirectionally. Both devices can send and receive text with full history management.",
     "connectToDevice": "Connect to Device",

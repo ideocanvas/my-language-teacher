@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "P2P 剪贴板 - 即时共享剪贴板内容",
-    "description": "直接在设备之间共享剪贴板内容。双方设备都可以发送和接收内容，并具有完整的历史记录管理。"
+    "title": "My Language Teacher",
+    "description": "通过实时内容共享和协作来学习语言。"
   },
   "common": {
     "backToHome": "返回首页",
@@ -31,7 +31,7 @@
     "waitingForConnection": "等待连接..."
   },
   "home": {
-    "title": "P2P 剪贴板",
+    "title": "My Language Teacher",
     "heroTitle": "即时共享剪贴板内容",
     "heroDescription": "连接设备以双向共享剪贴板内容。双方设备都可以发送和接收文本，并具有完整的历史记录管理。",
     "connectToDevice": "连接到设备",

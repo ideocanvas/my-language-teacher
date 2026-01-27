@@ -109,7 +109,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
         delete serializedItem.data;
         return serializedItem;
       });
-      localStorage.setItem('p2p-clipboard-history', JSON.stringify(serializableHistory));
+      localStorage.setItem('my-language-teacher-history', JSON.stringify(serializableHistory));
     } catch (err) {
       console.error('Failed to save clipboard history:', err);
     }
@@ -117,7 +117,7 @@ export default function ClipboardPage({ params }: { params: Promise<{ lang: stri
 
   const loadClipboardHistory = async (): Promise<ClipboardHistoryItemType[]> => {
     try {
-      const saved = localStorage.getItem('p2p-clipboard-history');
+      const saved = localStorage.getItem('my-language-teacher-history');
       if (!saved) return [];
 
       const history: ClipboardHistoryItemType[] = JSON.parse(saved);
