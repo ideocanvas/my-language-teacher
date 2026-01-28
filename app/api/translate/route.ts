@@ -1,7 +1,7 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { NextRequest, NextResponse } from "next/server";
 import { LLMClient } from "@/lib/llm-client";
-import { fetchDictionaryData, formatDictionaryForLLM } from "@/lib/free-dictionary";
+import { fetchDictionaryData, formatDictionaryForLLM, isDictionarySupported } from "@/lib/free-dictionary";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,28 +36,42 @@ export async function POST(request: NextRequest) {
       apiKey: llmApiKey,
       model: llmModel,
     });
-    console.log("Translating text:", { text, sourceLanguage, targetLanguage });
-    console.log("Using LLM settings:", { llmApiUrl, llmModel, llmApiKey: llmApiKey  });
-
-    // Fetch dictionary data for the source word (if it's a single word)
+    
+    // Fetch dictionary data for the source word (if it's a single word and language is supported)
     let dictionaryContext = "";
     const trimmedText = text.trim();
-    if (!trimmedText.includes(" ") && trimmedText.length < 50) {
+    const effectiveSourceLang = sourceLanguage || "auto";
+    if (!trimmedText.includes(" ") && trimmedText.length < 50 && isDictionarySupported(effectiveSourceLang)) {
       console.log("Fetching dictionary data for:", trimmedText);
-      const dictData = await fetchDictionaryData(trimmedText, sourceLanguage);
+      const dictData = await fetchDictionaryData(trimmedText, effectiveSourceLang);
       if (dictData) {
         dictionaryContext = formatDictionaryForLLM(dictData);
         console.log("Dictionary context:", dictionaryContext);
       }
     }
 
-    // Perform translation with dictionary context
-    const translationResult = await client.translateText(
-      text,
-      sourceLanguage || "auto",
-      targetLanguage,
-      dictionaryContext || undefined
-    );
+    // Check if input is a sentence (contains spaces or is longer than 50 chars)
+    const isSentence = trimmedText.includes(" ") || trimmedText.length > 50;
+
+    let translationResult;
+
+    if (isSentence) {
+      // Use sentence translation with word extraction
+      console.log("Translating sentence with word extraction");
+      translationResult = await client.translateSentence(
+        text,
+        sourceLanguage || "auto",
+        targetLanguage
+      );
+    } else {
+      // Use single word translation
+      translationResult = await client.translateText(
+        text,
+        sourceLanguage || "auto",
+        targetLanguage,
+        dictionaryContext || undefined
+      );
+    }
 
     return NextResponse.json(translationResult);
   } catch (error) {

@@ -5,6 +5,8 @@ import {
   PronunciationHelpResponse,
   ChatMessage,
   EnrichedTranslationResponse,
+  SentenceTranslationResponse,
+  WordSuggestion,
 } from "./vocabulary-types";
 
 /**
@@ -327,14 +329,14 @@ Include IPA notation, break down syllables, list similar sounding words, and des
     prompt += `Return a JSON object with this format:
 {
   "translatedText": "the translation",
-  "pronunciation": "IPA pronunciation (if applicable, otherwise empty string)",
+  "pronunciation": "IPA pronunciation using standard IPA symbols only (e.g., /həˈloʊ/, /ˈkæt/, /ˈwɜːrd/). Use only basic IPA symbols: /, ˈ, ˌ, a, æ, ɑ, ɒ, b, d, e, ə, ɛ, f, g, h, i, ɪ, j, k, l, m, n, ŋ, o, ɔ, p, r, s, ʃ, t, θ, ð, u, ʊ, v, w, z, ʒ. Avoid tone marks, unusual diacritics, or non-standard symbols. If dictionary pronunciation is provided, use it exactly.",
   "partOfSpeech": "noun|verb|adjective|adverb|pronoun|preposition|conjunction|interjection (if applicable, otherwise empty string)",
   "difficulty": 1-5 (1=easiest, 5=hardest, based on word complexity and usage frequency),
   "tags": ["tag1", "tag2", ...] (relevant tags like "common", "formal", "slang", "academic", "business", etc.),
   "notes": "brief usage notes or context (optional)"
 }
 
-Provide accurate translation and helpful metadata for language learners.`;
+Provide accurate translation and helpful metadata for language learners. Use standard IPA symbols only for pronunciation.`;
 
     try {
       const response = await this.makeChatCompletion({
@@ -342,7 +344,7 @@ Provide accurate translation and helpful metadata for language learners.`;
           {
             role: "system",
             content:
-              "You are a professional translator and language learning assistant. Provide accurate translations with helpful metadata. Always respond with valid JSON.",
+              "You are a professional translator and language learning assistant. Provide accurate translations with helpful metadata. Always respond with valid JSON. For IPA pronunciation, use only standard IPA symbols: /, ˈ, ˌ, a, æ, ɑ, b, d, e, ə, ɛ, f, g, h, i, ɪ, j, k, l, m, n, ŋ, o, ɔ, p, r, s, ʃ, t, θ, ð, u, ʊ, v, w, z, ʒ. Avoid tone marks, unusual diacritics, or non-standard symbols.",
           },
           { role: "user", content: prompt },
         ],
@@ -366,6 +368,99 @@ Provide accurate translation and helpful metadata for language learners.`;
         translatedText: text,
         difficulty: 3,
         tags: [],
+      };
+    }
+  }
+
+  async translateSentence(
+    text: string,
+    sourceLanguage: string,
+    targetLanguage: string
+  ): Promise<SentenceTranslationResponse> {
+    const prompt = `Translate the following sentence from ${sourceLanguage} to ${targetLanguage}:
+
+"${text}"
+
+Return a JSON object with this format:
+{
+  "translatedText": "the full sentence translation",
+  "wordSuggestions": [
+    {
+      "word": "individual word or phrase",
+      "translation": "translation of this word/phrase",
+      "pronunciation": "IPA pronunciation (optional)",
+      "partOfSpeech": "noun|verb|adjective|adverb|pronoun|preposition|conjunction|interjection (optional)",
+      "difficulty": 1-5 (based on word complexity),
+      "tags": ["common", "formal", "academic", etc.],
+      "notes": "brief usage notes (optional)"
+    }
+  ]
+}
+
+Extract 5-10 key words or phrases from the sentence that would be valuable for language learners to know. Be thorough and include:
+- All important vocabulary words (nouns, verbs, adjectives, adverbs)
+- Technical terms and jargon
+- ALL contrasting or opposite terms - if one is mentioned, ALWAYS include its counterpart (e.g., if "spam" is mentioned, MUST include "legitimate"; if "hot" is mentioned, MUST include "cold")
+- Useful phrases or collocations
+- Words that might be challenging for learners
+- Common expressions
+
+CRITICAL INSTRUCTION: When you see contrasting words like "spam and legitimate emails", you MUST extract BOTH "spam" AND "legitimate". Do not skip the second word in a contrast pair.
+
+IMPORTANT: Do not skip any significant words. If a word carries meaning in the sentence, include it. Include ALL adjectives, especially those used in contrasts.
+
+Provide accurate translations and helpful metadata for each word/phrase.`;
+
+    try {
+      const response = await this.makeChatCompletion({
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional translator and language learning assistant. Provide accurate sentence translations and extract valuable vocabulary. Always respond with valid JSON. For IPA pronunciation, use only standard IPA symbols.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 2500,
+      });
+
+      // Try to parse JSON, handling potential truncation
+      let parsed;
+      try {
+        parsed = JSON.parse(response);
+      } catch (parseError) {
+        // Try to extract valid JSON from truncated response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch {
+            throw parseError;
+          }
+        } else {
+          throw parseError;
+        }
+      }
+
+      return {
+        translatedText: parsed.translatedText || text,
+        wordSuggestions: (parsed.wordSuggestions || []).map((s: WordSuggestion) => ({
+          word: s.word,
+          translation: s.translation,
+          pronunciation: s.pronunciation || undefined,
+          partOfSpeech: s.partOfSpeech || undefined,
+          difficulty: (s.difficulty as 1 | 2 | 3 | 4 | 5) || 3,
+          tags: s.tags || [],
+          notes: s.notes || undefined,
+        })),
+      };
+    } catch (error) {
+      console.error("Failed to translate sentence:", error);
+      // Fallback to simple translation
+      return {
+        translatedText: text,
+        wordSuggestions: [],
       };
     }
   }

@@ -8,8 +8,8 @@ import {
     VocabularyEntry,
     VocabularyFilters
 } from "./vocabulary-types";
+import { getCurrentProfileId } from "./profile-storage";
 
-const DB_NAME = "LanguageTeacherDB";
 const DB_VERSION = 1;
 
 const STORES = {
@@ -18,6 +18,15 @@ const STORES = {
   STATS: "stats",
   SETTINGS: "settings",
 } as const;
+
+// Get profile-specific database name
+function getDBName(): string {
+  const profileId = getCurrentProfileId();
+  if (profileId) {
+    return `LanguageTeacherDB-${profileId}`;
+  }
+  return "LanguageTeacherDB";
+}
 
 // Default settings
 const DEFAULT_SETTINGS: AppSettings = {
@@ -62,7 +71,7 @@ class LanguageStorage {
     }
 
     return new Promise((resolve, reject) => {
-      const request = globalThis.indexedDB.open(DB_NAME, DB_VERSION);
+      const request = globalThis.indexedDB.open(getDBName(), DB_VERSION);
 
       request.onerror = () => reject(request.error || new Error("Failed to open database"));
       request.onsuccess = () => {

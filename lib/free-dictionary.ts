@@ -194,6 +194,14 @@ function mapLanguageCode(lang: string): string {
 }
 
 /**
+ * Check if a language is supported by Free Dictionary API
+ */
+export function isDictionarySupported(lang: string): boolean {
+  const supportedLanguages = ["en", "en-US", "en-GB", "es", "es-ES", "fr", "de", "it", "pt", "ru"];
+  return supportedLanguages.includes(lang);
+}
+
+/**
  * Format dictionary data for LLM context
  */
 export function formatDictionaryForLLM(data: DictionaryData | null): string {

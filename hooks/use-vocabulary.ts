@@ -46,13 +46,39 @@ export function useVocabulary() {
   }, []);
 
   const addWord = useCallback(
-    async (entry: Omit<VocabularyEntry, "id" | "createdAt" | "updatedAt" | "srsData">) => {
+    async (entry: Omit<VocabularyEntry, "id" | "createdAt" | "updatedAt" | "srsData" | "translationCount">) => {
       try {
         const now = Date.now();
+
+        // Check if word already exists (case-insensitive)
+        const existingIndex = vocabulary.findIndex(
+          (v) => v.word.toLowerCase().trim() === entry.word.toLowerCase().trim()
+        );
+
+        if (existingIndex >= 0) {
+          // Word exists, increment translation count
+          const existing = vocabulary[existingIndex];
+          const updated: VocabularyEntry = {
+            ...existing,
+            translationCount: existing.translationCount + 1,
+            updatedAt: now,
+          };
+
+          await languageStorage.updateVocabulary(updated);
+          setVocabulary((prev) =>
+            prev.map((e) => (e.id === existing.id ? updated : e))
+          );
+          await loadDailyReview();
+          toast.success(`Translation count: ${updated.translationCount}`);
+          return updated;
+        }
+
+        // New word, create entry with translationCount = 1
         const newEntry: VocabularyEntry = {
           ...entry,
           id: `${now}-${Math.random().toString(36).slice(2, 11)}`,
           srsData: createInitialSRSData(),
+          translationCount: 1,
           createdAt: now,
           updatedAt: now,
         };
@@ -69,7 +95,7 @@ export function useVocabulary() {
         throw err;
       }
     },
-    [loadDailyReview]
+    [loadDailyReview, vocabulary]
   );
 
   const updateWord = useCallback(

@@ -14,6 +14,7 @@ export interface VocabularyEntry {
   tags: string[]
   notes?: string
   difficulty: DifficultyLevel
+  translationCount: number // Number of times this word has been translated
   createdAt: number
   updatedAt: number
   lastReviewedAt?: number
@@ -108,6 +109,23 @@ export interface EnrichedTranslationResponse {
   difficulty: 1 | 2 | 3 | 4 | 5
   tags: string[]
   notes?: string
+}
+
+// Word suggestion from sentence translation
+export interface WordSuggestion {
+  word: string
+  translation: string
+  pronunciation?: string
+  partOfSpeech?: string
+  difficulty: 1 | 2 | 3 | 4 | 5
+  tags: string[]
+  notes?: string
+}
+
+// Sentence Translation Response
+export interface SentenceTranslationResponse {
+  translatedText: string
+  wordSuggestions: WordSuggestion[]
 }
 
 // LLM Chat Message

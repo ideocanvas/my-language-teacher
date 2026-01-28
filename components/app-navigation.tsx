@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ProfileSelector } from "./profile-selector";
 
 const navItems = [
   { href: "/en/vocabulary", icon: BookOpen, label: "Vocabulary" },
@@ -30,7 +31,7 @@ export function AppNavigation() {
             <span className="font-bold text-lg text-gray-900">Language Teacher</span>
           </Link>
 
-          <div className="flex space-x-1">
+          <div className="flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -57,6 +58,9 @@ export function AppNavigation() {
                 </Link>
               );
             })}
+            <div className="border-l border-gray-200 ml-2 pl-2">
+              <ProfileSelector />
+            </div>
           </div>
         </div>
       </div>

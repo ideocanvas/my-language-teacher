@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { useSettings } from "@/hooks/use-settings";
+import { WordSuggestion } from "@/lib/vocabulary-types";
 import {
   Volume2,
   Sparkles,
   BookOpen,
-  X,
-  Save,
   ArrowRight,
+  Plus,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,17 +25,8 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
   const [sourceText, setSourceText] = useState("");
   const [targetText, setTargetText] = useState("");
   const [translating, setTranslating] = useState(false);
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [showSavePanel, setShowSavePanel] = useState(false);
-
-  // Save panel state
-  const [pronunciation, setPronunciation] = useState("");
-  const [partOfSpeech, setPartOfSpeech] = useState("");
-  const [notes, setNotes] = useState("");
-  const [difficulty, setDifficulty] = useState<1 | 2 | 3 | 4 | 5>(3);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [exampleSentences, setExampleSentences] = useState<string[]>([]);
+  const [wordSuggestions, setWordSuggestions] = useState<WordSuggestion[]>([]);
+  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const loadParams = async () => {
@@ -54,9 +46,27 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
     }
   };
 
+  // Normalize text for consistent storage and duplicate detection
+  const normalizeText = (text: string): string => {
+    return text.trim().toLowerCase().replace(/\s+/g, " ");
+  };
+
   const handleTranslate = async () => {
     if (!sourceText.trim()) {
       toast.error("Please enter text to translate");
+      return;
+    }
+
+    // Normalize the input text
+    const normalizedInput = normalizeText(sourceText);
+
+    // Check if already exists (using normalized comparison)
+    const exists = vocabulary.some(
+      (v) => normalizeText(v.word) === normalizedInput
+    );
+
+    if (exists) {
+      toast.info("This word is already in your vocabulary");
       return;
     }
 
@@ -68,7 +78,7 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: sourceText,
+          text: sourceText.trim(),
           sourceLanguage: lang === "zh" ? "zh-CN" : "en",
           targetLanguage: settings.targetLanguage,
         }),
@@ -81,13 +91,39 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
       const data = await response.json();
       setTargetText(data.translatedText);
-      // Auto-populate fields from enriched translation response
-      if (data.pronunciation) setPronunciation(data.pronunciation);
-      if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech);
-      if (data.difficulty) setDifficulty(data.difficulty);
-      if (data.tags && Array.isArray(data.tags)) setTags(data.tags);
-      if (data.notes) setNotes(data.notes);
-      setShowSavePanel(true);
+
+      // Check if this is a sentence (contains spaces or is long)
+      const isSentence = sourceText.trim().includes(" ") || sourceText.trim().length > 50;
+
+      // Handle word suggestions from sentence translation
+      if (isSentence) {
+        // For sentences, show word suggestions but don't auto-save the sentence
+        if (data.wordSuggestions && Array.isArray(data.wordSuggestions) && data.wordSuggestions.length > 0) {
+          setWordSuggestions(data.wordSuggestions);
+          setSavedWords(new Set());
+          toast.success(`Found ${data.wordSuggestions.length} words to learn!`);
+        } else {
+          // No word suggestions extracted, just show the translation
+          setWordSuggestions([]);
+          toast.success("Sentence translated!");
+        }
+      } else {
+        // Single word translation - auto-save
+        await addWord({
+          word: sourceText.trim(),
+          translation: data.translatedText.trim(),
+          pronunciation: data.pronunciation || undefined,
+          partOfSpeech: data.partOfSpeech || undefined,
+          definitions: [],
+          exampleSentences: [],
+          tags: data.tags && Array.isArray(data.tags) ? data.tags : [],
+          notes: data.notes || undefined,
+          difficulty: data.difficulty || 3,
+        });
+
+        toast.success("Translation saved to vocabulary!");
+        setWordSuggestions([]);
+      }
     } catch (err) {
       console.error("Translation failed:", err);
       toast.error("Translation failed. Please try again.");
@@ -96,108 +132,25 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
     }
   };
 
-  const handleAIGenerate = async () => {
-    if (!sourceText.trim() || !targetText.trim()) {
-      toast.error("Please translate first to generate example sentences");
-      return;
-    }
-
-    setGeneratingAI(true);
-    try {
-      let sentenceDifficulty: 1 | 2 | 3;
-      if (difficulty <= 2) {
-        sentenceDifficulty = 1;
-      } else if (difficulty <= 4) {
-        sentenceDifficulty = 2;
-      } else {
-        sentenceDifficulty = 3;
-      }
-
-      const response = await fetch("/api/ai/sentences", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          word: sourceText,
-          translation: targetText,
-          difficulty: sentenceDifficulty,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to generate sentences");
-      }
-
-      const data = await response.json();
-
-      const newSentences = data.sentences.map((s: { sentence: string }) => s.sentence);
-      setExampleSentences((prev) => [...prev, ...newSentences]);
-      toast.success(`Generated ${newSentences.length} example sentences`);
-    } catch (err) {
-      console.error("AI generation failed:", err);
-      toast.error("Failed to generate example sentences");
-    } finally {
-      setGeneratingAI(false);
-    }
-  };
-
-  const addTag = () => {
-    const tag = tagInput.trim();
-    if (tag && !tags.includes(tag)) {
-      setTags([...tags, tag]);
-      setTagInput("");
-    }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((t) => t !== tagToRemove));
-  };
-
-  const handleSave = async () => {
-    if (!sourceText.trim() || !targetText.trim()) {
-      toast.error("Please translate first");
-      return;
-    }
-
-    // Check if already exists
-    const exists = vocabulary.some(
-      (v) => v.word.toLowerCase() === sourceText.toLowerCase().trim()
-    );
-
-    if (exists) {
-      toast.error("This word is already in your vocabulary");
-      return;
-    }
-
+  const saveSuggestedWord = async (suggestion: WordSuggestion) => {
     try {
       await addWord({
-        word: sourceText.trim(),
-        translation: targetText.trim(),
-        pronunciation: pronunciation.trim() || undefined,
-        partOfSpeech: partOfSpeech.trim() || undefined,
+        word: suggestion.word,
+        translation: suggestion.translation,
+        pronunciation: suggestion.pronunciation,
+        partOfSpeech: suggestion.partOfSpeech,
         definitions: [],
-        exampleSentences,
-        tags,
-        notes: notes.trim() || undefined,
-        difficulty,
+        exampleSentences: [],
+        tags: suggestion.tags,
+        notes: suggestion.notes,
+        difficulty: suggestion.difficulty,
       });
 
-      // Reset form
-      setSourceText("");
-      setTargetText("");
-      setPronunciation("");
-      setPartOfSpeech("");
-      setNotes("");
-      setDifficulty(3);
-      setTags([]);
-      setExampleSentences([]);
-      setShowSavePanel(false);
-
-      toast.success("Word saved successfully!");
+      setSavedWords((prev) => new Set(prev).add(suggestion.word));
+      toast.success(`"${suggestion.word}" saved!`);
     } catch (err) {
       console.error("Failed to save word:", err);
+      toast.error("Failed to save word");
     }
   };
 
@@ -307,204 +260,92 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
           </div>
         </div>
 
-        {/* Save to Vocabulary Panel */}
-        {showSavePanel && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b">
-              <div className="flex items-center space-x-3">
-                <Save className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">Save to Vocabulary</h3>
-              </div>
-              <button
-                onClick={() => setShowSavePanel(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        {/* Word Suggestions from Sentence Translation */}
+        {wordSuggestions.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
+              <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <span>Words to Learn from This Sentence</span>
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Click the + button to save words to your vocabulary
+              </p>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Word Preview */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">{getLanguageName(settings.sourceLanguage)}</p>
-                    <p className="text-xl font-bold text-gray-900">{sourceText}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">{getLanguageName(settings.targetLanguage)}</p>
-                    <p className="text-xl font-bold text-gray-900">{targetText}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Additional Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Pronunciation */}
-                <div>
-                  <label htmlFor="pronunciation" className="block text-sm font-medium text-gray-700 mb-2">
-                    Pronunciation (IPA)
-                  </label>
-                  <input
-                    id="pronunciation"
-                    type="text"
-                    value={pronunciation}
-                    onChange={(e) => setPronunciation(e.target.value)}
-                    placeholder="e.g., /həˈləʊ/"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                  />
-                </div>
-
-                {/* Part of Speech */}
-                <div>
-                  <label htmlFor="partOfSpeech" className="block text-sm font-medium text-gray-700 mb-2">
-                    Part of Speech
-                  </label>
-                  <select
-                    id="partOfSpeech"
-                    value={partOfSpeech}
-                    onChange={(e) => setPartOfSpeech(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Select...</option>
-                    <option value="noun">Noun</option>
-                    <option value="verb">Verb</option>
-                    <option value="adjective">Adjective</option>
-                    <option value="adverb">Adverb</option>
-                    <option value="pronoun">Pronoun</option>
-                    <option value="preposition">Preposition</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Difficulty */}
-              <fieldset>
-                <legend className="block text-sm font-medium text-gray-700 mb-4">
-                  Difficulty Level
-                </legend>
-                <div className="flex space-x-2">
-                  {[1, 2, 3, 4, 5].map((level) => {
-                    let buttonClass = "bg-gray-100 text-gray-700 hover:bg-gray-200";
-                    if (difficulty === level) {
-                      if (level <= 2) {
-                        buttonClass = "bg-green-600 text-white";
-                      } else if (level === 3) {
-                        buttonClass = "bg-yellow-500 text-white";
-                      } else {
-                        buttonClass = "bg-red-600 text-white";
-                      }
-                    }
-                    return (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setDifficulty(level as 1 | 2 | 3 | 4 | 5)}
-                        className={`flex-1 py-3 rounded-lg font-medium transition-colors ${buttonClass}`}
-                      >
-                        {level}
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-
-              {/* Tags */}
-              <div>
-                <label htmlFor="tagInput" className="block text-sm font-medium text-gray-700 mb-2">
-                  Tags
-                </label>
-                <div className="flex space-x-2 mb-3">
-                  <input
-                    id="tagInput"
-                    type="text"
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTag();
-                      }
-                    }}
-                    placeholder="Add a tag..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1"
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {wordSuggestions.map((suggestion) => {
+                  const isSaved = savedWords.has(suggestion.word);
+                  return (
+                    <div
+                      key={suggestion.word}
+                      className={`border rounded-lg p-4 transition-colors ${
+                        isSaved
+                          ? "bg-green-50 border-green-200"
+                          : "bg-gray-50 border-gray-200 hover:border-blue-300"
+                      }`}
                     >
-                      <span>{tag}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes..."
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-              </div>
-
-              {/* AI Generate Example Sentences */}
-              <div>
-                <button
-                  onClick={handleAIGenerate}
-                  disabled={generatingAI}
-                  className="flex items-center space-x-2 text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{generatingAI ? "Generating..." : "AI Generate Example Sentences"}</span>
-                </button>
-
-                  {/* Example Sentences */}
-                  {exampleSentences.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {exampleSentences.map((sentence) => (
-                        <div
-                          key={sentence}
-                          className="flex items-start justify-between bg-purple-50 p-3 rounded-lg"
-                        >
-                          <p className="text-gray-700 italic text-sm">"{sentence}"</p>
-                          <button
-                            type="button"
-                            onClick={() => setExampleSentences(exampleSentences.filter((s) => s !== sentence))}
-                            className="text-gray-400 hover:text-purple-600 ml-2"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="font-bold text-gray-900">{suggestion.word}</span>
+                            <button
+                              onClick={() => speakText(suggestion.word, settings.sourceLanguage)}
+                              className="text-gray-400 hover:text-blue-600 transition-colors"
+                              title="Listen"
+                            >
+                              <Volume2 className="w-4 h-4" />
+                            </button>
+                            {suggestion.pronunciation && (
+                              <span className="text-gray-500 text-sm font-mono">
+                                /{suggestion.pronunciation}/
+                              </span>
+                            )}
+                            {suggestion.partOfSpeech && (
+                              <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                                {suggestion.partOfSpeech}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-gray-700">{suggestion.translation}</p>
+                          {suggestion.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {suggestion.tags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {suggestion.notes && (
+                            <p className="text-sm text-gray-500 mt-2 italic">{suggestion.notes}</p>
+                          )}
                         </div>
-                      ))}
+                        <button
+                          onClick={() => saveSuggestedWord(suggestion)}
+                          disabled={isSaved}
+                          className={`ml-3 p-2 rounded-lg transition-colors ${
+                            isSaved
+                              ? "bg-green-100 text-green-600 cursor-default"
+                              : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                          }`}
+                          title={isSaved ? "Saved" : "Save to vocabulary"}
+                        >
+                          {isSaved ? (
+                            <Check className="w-5 h-5" />
+                          ) : (
+                            <Plus className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-
-              {/* Save Button */}
-              <button
-                onClick={handleSave}
-                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-              >
-                <Save className="w-5 h-5" />
-                <span>Save to Vocabulary</span>
-              </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

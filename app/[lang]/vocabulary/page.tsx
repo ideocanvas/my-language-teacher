@@ -306,6 +306,11 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                         >
                           {entry.difficulty}
                         </span>
+                        {entry.translationCount > 1 && (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Translated {entry.translationCount} times
+                          </span>
+                        )}
                       </div>
 
                       {/* Translation */}
