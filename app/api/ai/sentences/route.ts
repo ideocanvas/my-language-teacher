@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const { env } = getCloudflareContext();
 
     // Get LLM settings from Cloudflare secrets
-    const llmApiUrl = env.LLM_API_URL as string | undefined;
-    const llmApiKey = env.LLM_API_KEY as string | undefined;
-    const llmModel = env.LLM_MODEL as string | undefined;
+    const llmApiUrl = env.LLM_API_URL;
+    const llmApiKey = env.LLM_API_KEY;
+    const llmModel = env.LLM_MODEL;
 
     if (!llmApiUrl || !llmApiKey) {
       return NextResponse.json(

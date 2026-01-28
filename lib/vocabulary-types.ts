@@ -101,12 +101,15 @@ export interface GoogleTranslateResponse {
   }
 }
 
+// Difficulty rating type
+export type DifficultyRating = 1 | 2 | 3 | 4 | 5
+
 // Enriched Translation Response
 export interface EnrichedTranslationResponse {
   translatedText: string
   pronunciation?: string
   partOfSpeech?: string
-  difficulty: 1 | 2 | 3 | 4 | 5
+  difficulty: DifficultyRating
   tags: string[]
   notes?: string
 }
@@ -117,7 +120,7 @@ export interface WordSuggestion {
   translation: string
   pronunciation?: string
   partOfSpeech?: string
-  difficulty: 1 | 2 | 3 | 4 | 5
+  difficulty: DifficultyRating
   tags: string[]
   notes?: string
 }

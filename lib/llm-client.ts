@@ -431,7 +431,7 @@ Provide accurate translations and helpful metadata for each word/phrase.`;
         parsed = JSON.parse(response);
       } catch (parseError) {
         // Try to extract valid JSON from truncated response
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        const jsonMatch = /\{[\s\S]*\}/.exec(response);
         if (jsonMatch) {
           try {
             parsed = JSON.parse(jsonMatch[0]);
@@ -450,7 +450,7 @@ Provide accurate translations and helpful metadata for each word/phrase.`;
           translation: s.translation,
           pronunciation: s.pronunciation || undefined,
           partOfSpeech: s.partOfSpeech || undefined,
-          difficulty: (s.difficulty as 1 | 2 | 3 | 4 | 5) || 3,
+          difficulty: s.difficulty || 3,
           tags: s.tags || [],
           notes: s.notes || undefined,
         })),

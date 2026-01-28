@@ -65,11 +65,21 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
     return normalizedUser === normalizedCorrect;
   }, [userAnswer, currentWord]);
 
+  // Helper function to get input className
+  const getInputClassName = () => {
+    if (showResult && isCorrect) {
+      return "border-green-500 bg-green-50";
+    }
+    if (showResult && !isCorrect) {
+      return "border-red-500 bg-red-50";
+    }
+    return "border-gray-200 focus:border-blue-500 focus:outline-none";
+  };
+
   const handleSubmit = () => {
     if (!userAnswer.trim()) return;
     
     setAttempts((prev) => prev + 1);
-    const isCorrect = checkAnswer();
     setShowResult(true);
   };
 
@@ -242,13 +252,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
                   onKeyDown={handleKeyDown}
                   disabled={showResult}
                   placeholder="Type your answer..."
-                  className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-medium transition-all ${
-                    showResult
-                      ? isCorrect
-                        ? "border-green-500 bg-green-50"
-                        : "border-red-500 bg-red-50"
-                      : "border-gray-200 focus:border-blue-500 focus:outline-none"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-medium transition-all ${getInputClassName()}`}
                   autoFocus
                 />
               </div>
@@ -299,20 +303,20 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
 
         {/* Action buttons */}
         <div className="flex justify-center gap-4">
-          {!showResult ? (
+          {showResult ? (
+            <button
+              onClick={handleNext}
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              {isComplete() ? "Finish" : "Next Word"}
+            </button>
+          ) : (
             <button
               onClick={handleSubmit}
               disabled={!userAnswer.trim()}
               className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Check Answer
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              {isComplete() ? "Finish" : "Next Word"}
             </button>
           )}
         </div>

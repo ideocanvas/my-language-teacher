@@ -6,8 +6,6 @@ import { useProfiles } from "@/hooks/use-profiles";
 import {
   User,
   Plus,
-  Settings,
-  LogOut,
   Trash2,
   Edit2,
   Check,
@@ -120,9 +118,10 @@ export function ProfileSelector() {
       {/* Dropdown */}
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40"
+          <button
+            className="fixed inset-0 z-40 bg-transparent"
             onClick={() => setIsOpen(false)}
+            aria-label="Close dropdown"
           />
           <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 py-2">
             {/* Header */}
@@ -148,7 +147,7 @@ export function ProfileSelector() {
                         onChange={(e) => setEditName(e.target.value)}
                         className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
                         autoFocus
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === "Enter") handleSaveEdit();
                           if (e.key === "Escape") setEditingProfile(null);
                         }}
@@ -208,15 +207,7 @@ export function ProfileSelector() {
             </div>
 
             {/* Create New Profile */}
-            {!showCreateForm ? (
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="w-full px-4 py-3 flex items-center space-x-2 text-blue-600 hover:bg-blue-50 border-t border-gray-100"
-              >
-                <Plus className="w-5 h-5" />
-                <span className="font-medium">Create New Profile</span>
-              </button>
-            ) : (
+            {showCreateForm ? (
               <div className="px-4 py-3 border-t border-gray-100 space-y-3">
                 <input
                   type="text"
@@ -225,7 +216,7 @@ export function ProfileSelector() {
                   onChange={(e) => setNewProfileName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   autoFocus
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") handleCreateProfile();
                     if (e.key === "Escape") setShowCreateForm(false);
                   }}
@@ -260,6 +251,14 @@ export function ProfileSelector() {
                   </button>
                 </div>
               </div>
+            ) : (
+              <button
+                onClick={() => setShowCreateForm(true)}
+                className="w-full px-4 py-3 flex items-center space-x-2 text-blue-600 hover:bg-blue-50 border-t border-gray-100"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="font-medium">Create New Profile</span>
+              </button>
             )}
           </div>
         </>

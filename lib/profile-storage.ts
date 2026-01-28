@@ -3,8 +3,7 @@
  * Manages multiple user profiles with separate data
  */
 
-import { Profile, ProfileData, VocabularyEntry, AppSettings, LearningStats } from "./profile-types";
-import { createInitialSRSData } from "./srs-algorithm";
+import { Profile, ProfileData, AppSettings, LearningStats } from "./profile-types";
 
 const PROFILES_KEY = "language-teacher-profiles";
 const CURRENT_PROFILE_KEY = "language-teacher-current-profile";
@@ -16,7 +15,7 @@ const defaultSettings: AppSettings = {
   dailyReviewGoal: 20,
   srsSettings: {
     easyBonus: 1.3,
-    intervalModifier: 1.0,
+    intervalModifier: 1,
   },
 };
 
@@ -35,7 +34,7 @@ const defaultLearningStats: LearningStats = {
  * Get all profiles
  */
 export function getAllProfiles(): Profile[] {
-  if (typeof window === "undefined") return [];
+  if (globalThis.window === undefined) return [];
   const profiles = localStorage.getItem(PROFILES_KEY);
   return profiles ? JSON.parse(profiles) : [];
 }
@@ -44,7 +43,7 @@ export function getAllProfiles(): Profile[] {
  * Save all profiles
  */
 export function saveAllProfiles(profiles: Profile[]): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
 }
 
@@ -52,7 +51,7 @@ export function saveAllProfiles(profiles: Profile[]): void {
  * Get current profile ID
  */
 export function getCurrentProfileId(): string | null {
-  if (typeof window === "undefined") return null;
+  if (globalThis.window === undefined) return null;
   return localStorage.getItem(CURRENT_PROFILE_KEY);
 }
 
@@ -60,7 +59,7 @@ export function getCurrentProfileId(): string | null {
  * Set current profile ID
  */
 export function setCurrentProfileId(profileId: string): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.setItem(CURRENT_PROFILE_KEY, profileId);
   
   // Update lastUsedAt for the profile
@@ -118,7 +117,7 @@ export function deleteProfile(profileId: string): boolean {
   saveAllProfiles(updatedProfiles);
 
   // Delete profile data
-  if (typeof window !== "undefined") {
+  if (globalThis.window !== undefined) {
     localStorage.removeItem(getProfileDataKey(profileId));
   }
 
@@ -161,7 +160,7 @@ function getProfileDataKey(profileId: string): string {
  * Get profile data
  */
 export function getProfileData(profileId: string): ProfileData {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return {
       vocabulary: [],
       settings: defaultSettings,
@@ -186,7 +185,7 @@ export function getProfileData(profileId: string): ProfileData {
  * Save profile data
  */
 export function saveProfileData(profileId: string, data: ProfileData): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
   localStorage.setItem(getProfileDataKey(profileId), JSON.stringify(data));
 }
 
@@ -254,7 +253,7 @@ export function initializeProfiles(): Profile {
  * Migrate existing data to profile system
  */
 export function migrateExistingData(): void {
-  if (typeof window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
   // Check if already migrated
   const profiles = getAllProfiles();

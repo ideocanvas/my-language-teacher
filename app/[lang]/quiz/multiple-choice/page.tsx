@@ -265,20 +265,25 @@ export default function MultipleChoiceQuizPage({ params }: { params: Promise<{ l
                 const showCorrect = showResult && option.isCorrect;
                 const showWrong = showResult && isSelected && !option.isCorrect;
 
+                const getOptionClassName = () => {
+                  if (showCorrect) {
+                    return "border-green-500 bg-green-50";
+                  }
+                  if (showWrong) {
+                    return "border-red-500 bg-red-50";
+                  }
+                  if (isSelected) {
+                    return "border-blue-500 bg-blue-50";
+                  }
+                  return "border-gray-200 hover:border-blue-300 hover:bg-gray-50";
+                };
+
                 return (
                   <button
                     key={option.id}
                     onClick={() => handleSelectOption(option.id)}
                     disabled={showResult}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      showCorrect
-                        ? "border-green-500 bg-green-50"
-                        : showWrong
-                        ? "border-red-500 bg-red-50"
-                        : isSelected
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                    }`}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${getOptionClassName()}`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-gray-900">{option.text}</span>

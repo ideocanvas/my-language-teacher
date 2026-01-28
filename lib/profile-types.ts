@@ -1,5 +1,6 @@
 // Profile types for multi-user support
-import { VocabularyEntry, AppSettings, LearningStats } from "./vocabulary-types"
+export type { VocabularyEntry, AppSettings, LearningStats } from "./vocabulary-types"
+import type { VocabularyEntry, AppSettings, LearningStats } from "./vocabulary-types"
 
 export interface Profile {
   id: string
@@ -14,6 +15,3 @@ export interface ProfileData {
   settings: AppSettings
   learningStats: LearningStats
 }
-
-// Re-export for convenience
-export type { VocabularyEntry, AppSettings, LearningStats }

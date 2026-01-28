@@ -3,7 +3,7 @@
 import { AppNavigation } from "@/components/app-navigation";
 import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
-import { Check, Home, Volume2, Play, Eye, EyeOff } from "lucide-react";
+import { Check, Home, Volume2, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
@@ -28,7 +28,6 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
   const [showResult, setShowResult] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
   const [attempts, setAttempts] = useState(0);
-  const [hasPlayed, setHasPlayed] = useState(false);
 
   useEffect(() => {
     const loadParams = async () => {
@@ -54,7 +53,6 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
     try {
       const { speakText } = await import("@/lib/tts-utils");
       await speakText(text, lang === "zh" ? "zh-CN" : "en-US");
-      setHasPlayed(true);
     } catch (err) {
       console.error("Failed to speak word:", err);
     }
@@ -66,6 +64,17 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
     const normalizedCorrect = currentWord.word.trim().toLowerCase();
     return normalizedUser === normalizedCorrect;
   }, [userAnswer, currentWord]);
+
+  // Helper function to get input className
+  const getInputClassName = () => {
+    if (showResult && isCorrect) {
+      return "border-green-500 bg-green-50";
+    }
+    if (showResult && !isCorrect) {
+      return "border-red-500 bg-red-50";
+    }
+    return "border-gray-200 focus:border-blue-500 focus:outline-none";
+  };
 
   const handleSubmit = () => {
     if (!userAnswer.trim()) return;
@@ -94,7 +103,6 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
         setUserAnswer("");
         setShowResult(false);
         setShowAnswer(false);
-        setHasPlayed(false);
         setAttempts(0);
         setStartTime(Date.now());
       }
@@ -245,13 +253,7 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
                   onKeyDown={handleKeyDown}
                   disabled={showResult}
                   placeholder="Type what you heard..."
-                  className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-medium transition-all ${
-                    showResult
-                      ? isCorrect
-                        ? "border-green-500 bg-green-50"
-                        : "border-red-500 bg-red-50"
-                      : "border-gray-200 focus:border-blue-500 focus:outline-none"
-                  }`}
+                  className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-medium transition-all ${getInputClassName()}`}
                   autoFocus
                 />
               </div>
@@ -314,20 +316,20 @@ export default function ListeningQuizPage({ params }: { params: Promise<{ lang: 
 
         {/* Action buttons */}
         <div className="flex justify-center gap-4">
-          {!showResult ? (
+          {showResult ? (
+            <button
+              onClick={handleNext}
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              {isComplete() ? "Finish" : "Next Word"}
+            </button>
+          ) : (
             <button
               onClick={handleSubmit}
               disabled={!userAnswer.trim()}
               className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Check Answer
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-            >
-              {isComplete() ? "Finish" : "Next Word"}
             </button>
           )}
         </div>

@@ -46,7 +46,7 @@ export function useProfiles() {
     setCurrentProfileId(profileId);
     setCurrentProfile(getCurrentProfile());
     // Reload the page to refresh all data
-    window.location.reload();
+    globalThis.location.reload();
   }, []);
 
   // Create a new profile
@@ -72,7 +72,7 @@ export function useProfiles() {
         setCurrentProfile(getCurrentProfile());
         toast.success("Profile deleted");
         // Reload if we deleted the current profile
-        window.location.reload();
+        globalThis.location.reload();
       }
       return success;
     } catch (err) {
