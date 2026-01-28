@@ -185,12 +185,12 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
         {/* Translation Area */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           {/* Language Bar */}
-          <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b">
-            <span className="text-sm font-medium text-gray-700">
+          <div className="relative flex items-center justify-center px-6 py-3 bg-gray-50 border-b">
+            <span className="absolute left-6 text-sm font-medium text-gray-700">
               {getLanguageName(settings.sourceLanguage)}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700">
+            <span className="absolute right-6 text-sm font-medium text-gray-700">
               {getLanguageName(settings.targetLanguage)}
             </span>
           </div>

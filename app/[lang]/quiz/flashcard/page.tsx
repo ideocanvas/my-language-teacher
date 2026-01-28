@@ -170,7 +170,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">
-              Card {progress.current + 1} of {progress.total}
+              Card {Math.min(progress.current + 1, progress.total)} of {progress.total}
             </span>
             <button
               onClick={handleCancel}
