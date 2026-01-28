@@ -66,7 +66,6 @@ export interface LearningStats {
 export interface AppSettings {
   sourceLanguage: string
   targetLanguage: string
-  googleTranslateApiKey?: string
   llmApiUrl?: string
   llmApiKey?: string
   llmModel?: string

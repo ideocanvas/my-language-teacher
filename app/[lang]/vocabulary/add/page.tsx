@@ -60,27 +60,29 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
       return;
     }
 
-    if (!settings.googleTranslateApiKey) {
-      toast.error("Google Translate API key is required");
+    if (!settings.llmApiKey || !settings.llmApiUrl) {
+      toast.error("LLM API key and URL are required");
       return;
     }
 
     setTranslating(true);
     try {
-      const { translateText } = await import("@/lib/google-translate");
-      const result = await translateText(
+      const { createLLMClient } = await import("@/lib/llm-client");
+      const client = createLLMClient({
+        baseUrl: settings.llmApiUrl,
+        apiKey: settings.llmApiKey,
+        model: settings.llmModel,
+      });
+      const result = await client.translateText(
         sourceText,
-        settings.googleTranslateApiKey,
-        {
-          source: lang === "zh" ? "zh-CN" : "en",
-          target: settings.targetLanguage,
-        }
+        lang === "zh" ? "zh-CN" : "en",
+        settings.targetLanguage
       );
       setTargetText(result);
       setShowSavePanel(true);
     } catch (err) {
       console.error("Translation failed:", err);
-      toast.error("Translation failed. Please check your API key.");
+      toast.error("Translation failed. Please check your LLM API settings.");
     } finally {
       setTranslating(false);
     }

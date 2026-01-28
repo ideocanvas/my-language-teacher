@@ -306,6 +306,38 @@ Include IPA notation, break down syllables, list similar sounding words, and des
       maxTokens: 1000,
     });
   }
+
+  async translateText(
+    text: string,
+    sourceLanguage: string,
+    targetLanguage: string
+  ): Promise<string> {
+    const prompt = `Translate the following text from ${sourceLanguage} to ${targetLanguage}:
+
+"${text}"
+
+Provide only the translation, without any additional explanation or formatting.`;
+
+    try {
+      const response = await this.makeChatCompletion({
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional translator. Provide accurate and natural translations. Respond with only the translated text, no explanations.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 500,
+      });
+
+      return response.trim();
+    } catch (error) {
+      console.error("Failed to translate text:", error);
+      throw new Error("Translation failed");
+    }
+  }
 }
 
 export function createLLMClient(options: LLMClientOptions): LLMClient {
