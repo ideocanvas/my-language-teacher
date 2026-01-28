@@ -1,3 +1,6 @@
+// Difficulty level type
+export type DifficultyLevel = 1 | 2 | 3 | 4 | 5
+
 // Vocabulary Entry
 export interface VocabularyEntry {
   id: string
@@ -10,7 +13,7 @@ export interface VocabularyEntry {
   exampleSentences: string[]
   tags: string[]
   notes?: string
-  difficulty: 1 | 2 | 3 | 4 | 5
+  difficulty: DifficultyLevel
   createdAt: number
   updatedAt: number
   lastReviewedAt?: number
@@ -95,6 +98,16 @@ export interface GoogleTranslateResponse {
       detectedSourceLanguage?: string
     }>
   }
+}
+
+// Enriched Translation Response
+export interface EnrichedTranslationResponse {
+  translatedText: string
+  pronunciation?: string
+  partOfSpeech?: string
+  difficulty: 1 | 2 | 3 | 4 | 5
+  tags: string[]
+  notes?: string
 }
 
 // LLM Chat Message

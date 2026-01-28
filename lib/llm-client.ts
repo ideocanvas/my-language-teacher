@@ -4,6 +4,7 @@ import {
   GrammarExplanationResponse,
   PronunciationHelpResponse,
   ChatMessage,
+  EnrichedTranslationResponse,
 } from "./vocabulary-types";
 
 /**
@@ -310,13 +311,30 @@ Include IPA notation, break down syllables, list similar sounding words, and des
   async translateText(
     text: string,
     sourceLanguage: string,
-    targetLanguage: string
-  ): Promise<string> {
-    const prompt = `Translate the following text from ${sourceLanguage} to ${targetLanguage}:
+    targetLanguage: string,
+    dictionaryContext?: string
+  ): Promise<EnrichedTranslationResponse> {
+    let prompt = `Translate the following text from ${sourceLanguage} to ${targetLanguage}:
 
 "${text}"
 
-Provide only the translation, without any additional explanation or formatting.`;
+`;
+
+    if (dictionaryContext) {
+      prompt += `Use this dictionary data as reference:\n${dictionaryContext}\n\n`;
+    }
+
+    prompt += `Return a JSON object with this format:
+{
+  "translatedText": "the translation",
+  "pronunciation": "IPA pronunciation (if applicable, otherwise empty string)",
+  "partOfSpeech": "noun|verb|adjective|adverb|pronoun|preposition|conjunction|interjection (if applicable, otherwise empty string)",
+  "difficulty": 1-5 (1=easiest, 5=hardest, based on word complexity and usage frequency),
+  "tags": ["tag1", "tag2", ...] (relevant tags like "common", "formal", "slang", "academic", "business", etc.),
+  "notes": "brief usage notes or context (optional)"
+}
+
+Provide accurate translation and helpful metadata for language learners.`;
 
     try {
       const response = await this.makeChatCompletion({
@@ -324,18 +342,31 @@ Provide only the translation, without any additional explanation or formatting.`
           {
             role: "system",
             content:
-              "You are a professional translator. Provide accurate and natural translations. Respond with only the translated text, no explanations.",
+              "You are a professional translator and language learning assistant. Provide accurate translations with helpful metadata. Always respond with valid JSON.",
           },
           { role: "user", content: prompt },
         ],
         temperature: 0.3,
-        maxTokens: 500,
+        maxTokens: 800,
       });
 
-      return response.trim();
+      const parsed = JSON.parse(response);
+      return {
+        translatedText: parsed.translatedText || text,
+        pronunciation: parsed.pronunciation || undefined,
+        partOfSpeech: parsed.partOfSpeech || undefined,
+        difficulty: (parsed.difficulty as 1 | 2 | 3 | 4 | 5) || 3,
+        tags: parsed.tags || [],
+        notes: parsed.notes || undefined,
+      };
     } catch (error) {
       console.error("Failed to translate text:", error);
-      throw new Error("Translation failed");
+      // Fallback to simple translation
+      return {
+        translatedText: text,
+        difficulty: 3,
+        tags: [],
+      };
     }
   }
 }

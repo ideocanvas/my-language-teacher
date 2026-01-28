@@ -81,6 +81,12 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
       const data = await response.json();
       setTargetText(data.translatedText);
+      // Auto-populate fields from enriched translation response
+      if (data.pronunciation) setPronunciation(data.pronunciation);
+      if (data.partOfSpeech) setPartOfSpeech(data.partOfSpeech);
+      if (data.difficulty) setDifficulty(data.difficulty);
+      if (data.tags && Array.isArray(data.tags)) setTags(data.tags);
+      if (data.notes) setNotes(data.notes);
       setShowSavePanel(true);
     } catch (err) {
       console.error("Translation failed:", err);
