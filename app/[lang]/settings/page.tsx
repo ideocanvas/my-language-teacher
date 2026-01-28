@@ -6,7 +6,6 @@ import { useVocabulary } from "@/hooks/use-vocabulary";
 import { languageStorage } from "@/lib/language-storage";
 import {
   Download,
-  Key,
   RotateCcw,
   Save,
   Settings as SettingsIcon,
@@ -20,21 +19,15 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
   const { settings, loading, updateSettings, resetSettings } = useSettings();
   const { vocabulary } = useVocabulary();
 
-  const [activeTab, setActiveTab] = useState<"general" | "api" | "data">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "data">("general");
 
   // Form states
-  const [llmApiUrl, setLlmApiUrl] = useState("");
-  const [llmApiKey, setLlmApiKey] = useState("");
-  const [llmModel, setLlmModel] = useState("");
   const [dailyReviewGoal, setDailyReviewGoal] = useState(20);
   const [easyBonus, setEasyBonus] = useState(1.3);
   const [intervalModifier, setIntervalModifier] = useState(1);
 
   useEffect(() => {
     if (settings) {
-      setLlmApiUrl(settings.llmApiUrl || "");
-      setLlmApiKey(settings.llmApiKey || "");
-      setLlmModel(settings.llmModel || "");
       setDailyReviewGoal(settings.dailyReviewGoal);
       setEasyBonus(settings.srsSettings.easyBonus);
       setIntervalModifier(settings.srsSettings.intervalModifier);
@@ -44,9 +37,6 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
   const handleSave = async () => {
     try {
       await updateSettings({
-        llmApiUrl: llmApiUrl || undefined,
-        llmApiKey: llmApiKey || undefined,
-        llmModel: llmModel || undefined,
         dailyReviewGoal,
         srsSettings: {
           easyBonus,
@@ -133,7 +123,6 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
 
   const tabs = [
     { id: "general" as const, icon: SettingsIcon, label: "General" },
-    { id: "api" as const, icon: Key, label: "API Settings" },
     { id: "data" as const, icon: Download, label: "Data Management" },
   ];
 
@@ -291,58 +280,6 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       <p className="text-xs text-gray-500 mt-1">
                         Multiplier for all intervals (default: 1.0)
                       </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* API Settings */}
-            {activeTab === "api" && (
-              <div className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    OpenAI-Compatible LLM API
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="llmApiUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                        Base URL
-                      </label>
-                      <input
-                        id="llmApiUrl"
-                        type="text"
-                        value={llmApiUrl}
-                        onChange={(e) => setLlmApiUrl(e.target.value)}
-                        placeholder="e.g., https://api.openai.com"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="llmApiKey" className="block text-sm font-medium text-gray-700 mb-2">
-                        API Key
-                      </label>
-                      <input
-                        id="llmApiKey"
-                        type="password"
-                        value={llmApiKey}
-                        onChange={(e) => setLlmApiKey(e.target.value)}
-                        placeholder="Enter your LLM API key"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="llmModel" className="block text-sm font-medium text-gray-700 mb-2">
-                        Model (optional)
-                      </label>
-                      <input
-                        id="llmModel"
-                        type="text"
-                        value={llmModel}
-                        onChange={(e) => setLlmModel(e.target.value)}
-                        placeholder="e.g., gpt-3.5-turbo"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
                     </div>
                   </div>
                 </div>

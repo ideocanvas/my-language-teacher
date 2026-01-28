@@ -66,9 +66,6 @@ export interface LearningStats {
 export interface AppSettings {
   sourceLanguage: string
   targetLanguage: string
-  llmApiUrl?: string
-  llmApiKey?: string
-  llmModel?: string
   dailyReviewGoal: number
   srsSettings: {
     easyBonus: number // Bonus multiplier for easy cards

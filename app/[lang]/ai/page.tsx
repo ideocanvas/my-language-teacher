@@ -1,8 +1,6 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
-import { useSettings } from "@/hooks/use-settings";
-import { createLLMClient } from "@/lib/llm-client";
 import { ChatMessage } from "@/lib/vocabulary-types";
 import {
     Book,
@@ -10,11 +8,9 @@ import {
     MessageSquare,
     Mic,
     Send,
-    Settings as SettingsIcon,
     Sparkles,
     Trash2
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -22,8 +18,6 @@ type AIFeature = "chat" | "sentences" | "compare" | "pronunciation";
 
 export default function AIAssistantPage({ params }: { params: Promise<{ lang: string }> }) {
   const [lang, setLang] = useState("en");
-  const router = useRouter();
-  const { settings } = useSettings();
 
   const [activeFeature, setActiveFeature] = useState<AIFeature>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -48,12 +42,6 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    if (!settings.llmApiKey || !settings.llmApiUrl) {
-      toast.error("Please configure your LLM API settings first");
-      router.push(`/${lang}/settings`);
-      return;
-    }
-
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -66,18 +54,28 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
     setLoading(true);
 
     try {
-      const client = createLLMClient({
-        baseUrl: settings.llmApiUrl,
-        apiKey: settings.llmApiKey,
-        model: settings.llmModel,
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+          systemPrompt: `You are a helpful language learning assistant. Help the user practice and learn ${lang === "zh" ? "Chinese" : "English"}. Be patient, encouraging, and provide corrections when needed.`,
+        }),
       });
 
-      const response = await client.continueConversation(messages, `You are a helpful language learning assistant. Help the user practice and learn ${lang === "zh" ? "Chinese" : "English"}. Be patient, encouraging, and provide corrections when needed.`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Chat failed");
+      }
+
+      const data = await response.json();
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: response,
+        content: data.response,
         timestamp: Date.now(),
       };
 
@@ -101,29 +99,30 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
       return;
     }
 
-    if (!settings.llmApiKey || !settings.llmApiUrl) {
-      toast.error("Please configure your LLM API settings first");
-      router.push(`/${lang}/settings`);
-      return;
-    }
-
     setLoading(true);
     try {
-      const client = createLLMClient({
-        baseUrl: settings.llmApiUrl,
-        apiKey: settings.llmApiKey,
-        model: settings.llmModel,
+      const response = await fetch("/api/ai/sentences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          word: wordInput,
+          translation: translationInput,
+          difficulty: 2,
+        }),
       });
 
-      const response = await client.generateExampleSentences(
-        wordInput,
-        translationInput,
-        2
-      );
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate sentences");
+      }
 
-      if (response.sentences.length > 0) {
-        const result = response.sentences
-          .map((s) => `"${s.sentence}" - ${s.translation}`)
+      const data = await response.json();
+
+      if (data.sentences.length > 0) {
+        const result = data.sentences
+          .map((s: { sentence: string; translation: string }) => `"${s.sentence}" - ${s.translation}`)
           .join("\n\n");
 
         const assistantMessage: ChatMessage = {
@@ -134,7 +133,7 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
         };
 
         setMessages((prev) => [...prev, assistantMessage]);
-        toast.success(`Generated ${response.sentences.length} sentences`);
+        toast.success(`Generated ${data.sentences.length} sentences`);
       }
     } catch (err) {
       console.error("Failed to generate sentences:", err);
@@ -150,26 +149,29 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
       return;
     }
 
-    if (!settings.llmApiKey || !settings.llmApiUrl) {
-      toast.error("Please configure your LLM API settings first");
-      router.push(`/${lang}/settings`);
-      return;
-    }
-
     setLoading(true);
     try {
-      const client = createLLMClient({
-        baseUrl: settings.llmApiUrl,
-        apiKey: settings.llmApiKey,
-        model: settings.llmModel,
+      const response = await fetch("/api/ai/compare", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          words: compareWords,
+        }),
       });
 
-      const response = await client.compareWords(compareWords);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to compare words");
+      }
+
+      const data = await response.json();
 
       const result = [
-        response.differences.length > 0 && `**Differences:**\n${response.differences.join("\n")}`,
-        response.examples.length > 0 && `\n**Examples:**\n${response.examples.join("\n")}`,
-        response.recommendations.length > 0 && `\n**When to use:**\n${response.recommendations.join("\n")}`,
+        data.differences.length > 0 && `**Differences:**\n${data.differences.join("\n")}`,
+        data.examples.length > 0 && `\n**Examples:**\n${data.examples.join("\n")}`,
+        data.recommendations.length > 0 && `\n**When to use:**\n${data.recommendations.join("\n")}`,
       ]
         .filter(Boolean)
         .join("\n");
@@ -262,18 +264,9 @@ export default function AIAssistantPage({ params }: { params: Promise<{ lang: st
                   <p className="text-gray-600 mb-4">
                     Chat with the AI to practice your language skills
                   </p>
-                  {!settings.llmApiKey || !settings.llmApiUrl ? (
-                    <button
-                      onClick={() => router.push(`/${lang}/settings`)}
-                      className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
-                    >
-                      Configure API settings <SettingsIcon className="w-4 h-4 ml-1" />
-                    </button>
-                  ) : (
-                    <p className="text-sm text-gray-500">
-                      Type a message below to get started
-                    </p>
-                  )}
+                  <p className="text-sm text-gray-500">
+                    Type a message below to get started
+                  </p>
                 </div>
               ) : (
                 messages.map((msg) => (

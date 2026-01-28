@@ -60,29 +60,31 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
       return;
     }
 
-    if (!settings.llmApiKey || !settings.llmApiUrl) {
-      toast.error("LLM API key and URL are required");
-      return;
-    }
-
     setTranslating(true);
     try {
-      const { createLLMClient } = await import("@/lib/llm-client");
-      const client = createLLMClient({
-        baseUrl: settings.llmApiUrl,
-        apiKey: settings.llmApiKey,
-        model: settings.llmModel,
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: sourceText,
+          sourceLanguage: lang === "zh" ? "zh-CN" : "en",
+          targetLanguage: settings.targetLanguage,
+        }),
       });
-      const result = await client.translateText(
-        sourceText,
-        lang === "zh" ? "zh-CN" : "en",
-        settings.targetLanguage
-      );
-      setTargetText(result);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Translation failed");
+      }
+
+      const data = await response.json();
+      setTargetText(data.translatedText);
       setShowSavePanel(true);
     } catch (err) {
       console.error("Translation failed:", err);
-      toast.error("Translation failed. Please check your LLM API settings.");
+      toast.error("Translation failed. Please try again.");
     } finally {
       setTranslating(false);
     }
@@ -94,20 +96,8 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
       return;
     }
 
-    if (!settings.llmApiKey || !settings.llmApiUrl) {
-      toast.error("LLM API key and URL are required");
-      return;
-    }
-
     setGeneratingAI(true);
     try {
-      const { createLLMClient } = await import("@/lib/llm-client");
-      const client = createLLMClient({
-        baseUrl: settings.llmApiUrl,
-        apiKey: settings.llmApiKey,
-        model: settings.llmModel,
-      });
-
       let sentenceDifficulty: 1 | 2 | 3;
       if (difficulty <= 2) {
         sentenceDifficulty = 1;
@@ -116,13 +106,27 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
       } else {
         sentenceDifficulty = 3;
       }
-      const response = await client.generateExampleSentences(
-        sourceText,
-        targetText,
-        sentenceDifficulty
-      );
 
-      const newSentences = response.sentences.map((s) => s.sentence);
+      const response = await fetch("/api/ai/sentences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          word: sourceText,
+          translation: targetText,
+          difficulty: sentenceDifficulty,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate sentences");
+      }
+
+      const data = await response.json();
+
+      const newSentences = data.sentences.map((s: { sentence: string }) => s.sentence);
       setExampleSentences((prev) => [...prev, ...newSentences]);
       toast.success(`Generated ${newSentences.length} example sentences`);
     } catch (err) {
@@ -455,16 +459,15 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
               </div>
 
               {/* AI Generate Example Sentences */}
-              {settings.llmApiKey && settings.llmApiUrl && (
-                <div>
-                  <button
-                    onClick={handleAIGenerate}
-                    disabled={generatingAI}
-                    className="flex items-center space-x-2 text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{generatingAI ? "Generating..." : "AI Generate Example Sentences"}</span>
-                  </button>
+              <div>
+                <button
+                  onClick={handleAIGenerate}
+                  disabled={generatingAI}
+                  className="flex items-center space-x-2 text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>{generatingAI ? "Generating..." : "AI Generate Example Sentences"}</span>
+                </button>
 
                   {/* Example Sentences */}
                   {exampleSentences.length > 0 && (
@@ -487,7 +490,6 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                     </div>
                   )}
                 </div>
-              )}
 
               {/* Save Button */}
               <button
