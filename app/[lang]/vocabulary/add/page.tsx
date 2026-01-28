@@ -106,7 +106,14 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
         model: settings.llmModel,
       });
 
-      const sentenceDifficulty: 1 | 2 | 3 = difficulty <= 2 ? 1 : difficulty <= 4 ? 2 : 3;
+      let sentenceDifficulty: 1 | 2 | 3;
+      if (difficulty <= 2) {
+        sentenceDifficulty = 1;
+      } else if (difficulty <= 4) {
+        sentenceDifficulty = 2;
+      } else {
+        sentenceDifficulty = 3;
+      }
       const response = await client.generateExampleSentences(
         sourceText,
         targetText,
@@ -324,10 +331,11 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Pronunciation */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="pronunciation" className="block text-sm font-medium text-gray-700 mb-2">
                     Pronunciation (IPA)
                   </label>
                   <input
+                    id="pronunciation"
                     type="text"
                     value={pronunciation}
                     onChange={(e) => setPronunciation(e.target.value)}
@@ -338,10 +346,11 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
                 {/* Part of Speech */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="partOfSpeech" className="block text-sm font-medium text-gray-700 mb-2">
                     Part of Speech
                   </label>
                   <select
+                    id="partOfSpeech"
                     value={partOfSpeech}
                     onChange={(e) => setPartOfSpeech(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -358,43 +367,53 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
               </div>
 
               {/* Difficulty */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-4">
                   Difficulty Level
-                </label>
+                </legend>
                 <div className="flex space-x-2">
-                  {[1, 2, 3, 4, 5].map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => setDifficulty(level as 1 | 2 | 3 | 4 | 5)}
-                      className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                        difficulty === level
-                          ? level <= 2
-                            ? "bg-green-600 text-white"
-                            : level === 3
-                            ? "bg-yellow-500 text-white"
-                            : "bg-red-600 text-white"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    >
-                      {level}
-                    </button>
-                  ))}
+                  {[1, 2, 3, 4, 5].map((level) => {
+                    let buttonClass = "bg-gray-100 text-gray-700 hover:bg-gray-200";
+                    if (difficulty === level) {
+                      if (level <= 2) {
+                        buttonClass = "bg-green-600 text-white";
+                      } else if (level === 3) {
+                        buttonClass = "bg-yellow-500 text-white";
+                      } else {
+                        buttonClass = "bg-red-600 text-white";
+                      }
+                    }
+                    return (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setDifficulty(level as 1 | 2 | 3 | 4 | 5)}
+                        className={`flex-1 py-3 rounded-lg font-medium transition-colors ${buttonClass}`}
+                      >
+                        {level}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
+              </fieldset>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="tagInput" className="block text-sm font-medium text-gray-700 mb-2">
                   Tags
                 </label>
                 <div className="flex space-x-2 mb-3">
                   <input
+                    id="tagInput"
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag();
+                      }
+                    }}
                     placeholder="Add a tag..."
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
@@ -420,10 +439,11 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
                   Notes
                 </label>
                 <textarea
+                  id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Add any notes..."
@@ -447,15 +467,15 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                   {/* Example Sentences */}
                   {exampleSentences.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {exampleSentences.map((sentence, index) => (
+                      {exampleSentences.map((sentence) => (
                         <div
-                          key={index}
+                          key={sentence}
                           className="flex items-start justify-between bg-purple-50 p-3 rounded-lg"
                         >
                           <p className="text-gray-700 italic text-sm">"{sentence}"</p>
                           <button
                             type="button"
-                            onClick={() => setExampleSentences(exampleSentences.filter((_, i) => i !== index))}
+                            onClick={() => setExampleSentences(exampleSentences.filter((s) => s !== sentence))}
                             className="text-gray-400 hover:text-purple-600 ml-2"
                           >
                             <X className="w-4 h-4" />

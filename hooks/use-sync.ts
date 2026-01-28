@@ -8,15 +8,10 @@ import { toast } from "sonner";
 
 export function useSync() {
   const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState<number>(0);
   const [syncStats, setSyncStats] = useState<SyncStats | null>(null);
 
   const syncManager = getSyncManager();
-
-  // Initialize last sync time
-  useState(() => {
-    setLastSync(syncManager.getLastSyncTime());
-  });
+  const [lastSync, setLastSync] = useState<number>(() => syncManager.getLastSyncTime());
 
   const prepareSyncData = useCallback(async (): Promise<{
     vocabularyEntries: VocabularyEntry[];

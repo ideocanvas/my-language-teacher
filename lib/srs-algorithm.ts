@@ -31,13 +31,12 @@ export function calculateNextReview(
   const easyBonus = settings?.easyBonus || 1.3;
   const intervalModifier = settings?.intervalModifier || 1;
 
-  let newEfactor = efactor;
   let newInterval: number;
   let newRepetition: number;
 
   // Update E-Factor
   // EF' = EF + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))
-  newEfactor =
+  let newEfactor =
     efactor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02));
   if (newEfactor < 1.3) {
     newEfactor = 1.3;
@@ -58,7 +57,7 @@ export function calculateNextReview(
       newInterval = 6;
     } else {
       // Subsequent reviews
-      newInterval = Math.round(interval * efactor * intervalModifier);
+      newInterval = Math.round(interval * newEfactor * intervalModifier);
     }
     newRepetition = repetition + 1;
 

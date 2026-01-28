@@ -17,7 +17,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export default function SettingsPage({ params }: { params: Promise<{ lang: string }> }) {
-  const [lang, setLang] = useState("en");
   const { settings, loading, updateSettings, resetSettings } = useSettings();
   const { vocabulary } = useVocabulary();
 
@@ -31,15 +30,6 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
   const [dailyReviewGoal, setDailyReviewGoal] = useState(20);
   const [easyBonus, setEasyBonus] = useState(1.3);
   const [intervalModifier, setIntervalModifier] = useState(1);
-
-  useEffect(() => {
-    const loadParams = async () => {
-      const resolvedParams = await params;
-      const validLang = resolvedParams.lang === "zh" ? "zh" : "en";
-      setLang(validLang);
-    };
-    loadParams();
-  }, [params]);
 
   useEffect(() => {
     if (settings) {
@@ -199,10 +189,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="sourceLanguage" className="block text-sm font-medium text-gray-700 mb-2">
                         Source Language
                       </label>
                       <select
+                        id="sourceLanguage"
                         value={settings?.sourceLanguage}
                         onChange={(e) =>
                           updateSettings({ sourceLanguage: e.target.value })
@@ -221,10 +212,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="targetLanguage" className="block text-sm font-medium text-gray-700 mb-2">
                         Target Language
                       </label>
                       <select
+                        id="targetLanguage"
                         value={settings?.targetLanguage}
                         onChange={(e) =>
                           updateSettings({ targetLanguage: e.target.value })
@@ -251,10 +243,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="dailyReviewGoal" className="block text-sm font-medium text-gray-700 mb-2">
                         Daily Review Goal
                       </label>
                       <input
+                        id="dailyReviewGoal"
                         type="number"
                         min="1"
                         max="100"
@@ -267,10 +260,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="easyBonus" className="block text-sm font-medium text-gray-700 mb-2">
                         Easy Card Bonus
                       </label>
                       <input
+                        id="easyBonus"
                         type="number"
                         min="1.0"
                         max="2.0"
@@ -284,10 +278,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="intervalModifier" className="block text-sm font-medium text-gray-700 mb-2">
                         Interval Modifier
                       </label>
                       <input
+                        id="intervalModifier"
                         type="number"
                         min="0.5"
                         max="2.0"
@@ -313,10 +308,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                     Google Translate API
                   </h3>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="googleApiKey" className="block text-sm font-medium text-gray-700 mb-2">
                       API Key
                     </label>
                     <input
+                      id="googleApiKey"
                       type="password"
                       value={googleApiKey}
                       onChange={(e) => setGoogleApiKey(e.target.value)}
@@ -343,10 +339,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="llmApiUrl" className="block text-sm font-medium text-gray-700 mb-2">
                         Base URL
                       </label>
                       <input
+                        id="llmApiUrl"
                         type="text"
                         value={llmApiUrl}
                         onChange={(e) => setLlmApiUrl(e.target.value)}
@@ -355,10 +352,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="llmApiKey" className="block text-sm font-medium text-gray-700 mb-2">
                         API Key
                       </label>
                       <input
+                        id="llmApiKey"
                         type="password"
                         value={llmApiKey}
                         onChange={(e) => setLlmApiKey(e.target.value)}
@@ -367,10 +365,11 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="llmModel" className="block text-sm font-medium text-gray-700 mb-2">
                         Model (optional)
                       </label>
                       <input
+                        id="llmModel"
                         type="text"
                         value={llmModel}
                         onChange={(e) => setLlmModel(e.target.value)}

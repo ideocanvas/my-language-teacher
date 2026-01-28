@@ -96,6 +96,64 @@ export default function DashboardPage({ params }: { params: Promise<{ lang: stri
     );
   };
 
+  const renderRecentWordsContent = () => {
+    if (loading) {
+      return (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      );
+    }
+
+    if (vocabulary.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p>No words yet. Add your first word to get started!</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {vocabulary.slice(0, 5).map((entry) => (
+          <div
+            key={entry.id}
+            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold text-gray-900">{entry.word}</span>
+                <button
+                  onClick={() => speakWord(entry.word)}
+                  className="text-gray-400 hover:text-blue-600 transition-colors"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600">{entry.translation}</p>
+            </div>
+            <button
+              onClick={() => router.push(`/${lang}/vocabulary/${entry.id}`)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              View
+            </button>
+          </div>
+        ))}
+        {vocabulary.length > 5 && (
+          <button
+            onClick={() => router.push(`/${lang}/vocabulary`)}
+            className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2"
+          >
+            View all {vocabulary.length} words →
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <AppNavigation />
@@ -219,53 +277,7 @@ export default function DashboardPage({ params }: { params: Promise<{ lang: stri
         {/* Recent Words */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Words</h2>
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading...</p>
-            </div>
-          ) : vocabulary.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p>No words yet. Add your first word to get started!</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {vocabulary.slice(0, 5).map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-semibold text-gray-900">{entry.word}</span>
-                      <button
-                        onClick={() => speakWord(entry.word)}
-                        className="text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-sm text-gray-600">{entry.translation}</p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/${lang}/vocabulary/${entry.id}`)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    View
-                  </button>
-                </div>
-              ))}
-              {vocabulary.length > 5 && (
-                <button
-                  onClick={() => router.push(`/${lang}/vocabulary`)}
-                  className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2"
-                >
-                  View all {vocabulary.length} words →
-                </button>
-              )}
-            </div>
-          )}
+          {renderRecentWordsContent()}
         </div>
       </main>
     </div>

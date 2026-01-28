@@ -49,7 +49,7 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
   };
 
   const handleDelete = async (id: string, word: string) => {
-    if (window.confirm(`Are you sure you want to delete "${word}"?`)) {
+    if (globalThis.confirm(`Are you sure you want to delete "${word}"?`)) {
       try {
         await deleteWord(id);
         toast.success(`Deleted "${word}"`);
@@ -230,42 +230,49 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
         </div>
 
         {/* Vocabulary List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading vocabulary...</p>
-          </div>
-        ) : filteredVocabulary.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-            {hasFilters ? (
-              <>
-                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No matching words</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
-                <button
-                  onClick={clearFilters}
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Clear filters
-                </button>
-              </>
-            ) : (
-              <>
-                <Plus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No vocabulary yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Start building your vocabulary by adding new words
-                </p>
-                <button
-                  onClick={() => router.push(`/${lang}/vocabulary/add`)}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Add your first word
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
+        {(() => {
+          if (loading) {
+            return (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading vocabulary...</p>
+              </div>
+            );
+          }
+          if (filteredVocabulary.length === 0) {
+            return (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                {hasFilters ? (
+                  <>
+                    <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No matching words</h3>
+                    <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
+                    <button
+                      onClick={clearFilters}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Clear filters
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No vocabulary yet</h3>
+                    <p className="text-gray-600 mb-4">
+                      Start building your vocabulary by adding new words
+                    </p>
+                    <button
+                      onClick={() => router.push(`/${lang}/vocabulary/add`)}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Add your first word
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          }
+          return (
           <div className="space-y-4">
             {filteredVocabulary.map((entry) => {
               const daysUntilReview = getDaysUntilReview(entry.srsData);
@@ -332,7 +339,7 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                           <span className="text-orange-600 font-medium">Due for review</span>
                         ) : (
                           <span>
-                            Review in {daysUntilReview} day{daysUntilReview !== 1 ? "s" : ""}
+                            Review in {daysUntilReview} day{daysUntilReview === 1 ? "" : "s"}
                           </span>
                         )}
                       </div>
@@ -360,7 +367,8 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
               );
             })}
           </div>
-        )}
+          );
+        })()}
       </main>
     </div>
   );

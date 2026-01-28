@@ -75,6 +75,7 @@ export default function QuizPage({ params }: { params: Promise<{ lang: string }>
   };
 
   const dueWordsCount = dailyReview?.dueCount || 0;
+  const pluralSuffix = dueWordsCount === 1 ? "" : "s";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -86,7 +87,7 @@ export default function QuizPage({ params }: { params: Promise<{ lang: string }>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Quizzes</h1>
           <p className="text-gray-600">
             {dueWordsCount > 0
-              ? `${dueWordsCount} word${dueWordsCount === 1 ? "" : "s"} due for review`
+              ? `${dueWordsCount} word${pluralSuffix} due for review`
               : "Start a practice session to improve your vocabulary"}
           </p>
         </div>

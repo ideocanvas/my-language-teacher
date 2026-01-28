@@ -51,7 +51,7 @@ export function useVocabulary() {
         const now = Date.now();
         const newEntry: VocabularyEntry = {
           ...entry,
-          id: `${now}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${now}-${Math.random().toString(36).slice(2, 11)}`,
           srsData: createInitialSRSData(),
           createdAt: now,
           updatedAt: now,
@@ -211,7 +211,7 @@ export function useVocabulary() {
         const now = Date.now();
         const newEntries: VocabularyEntry[] = entries.map((entry, index) => ({
           ...entry,
-          id: `${now}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${now}-${index}-${Math.random().toString(36).slice(2, 11)}`,
           srsData: createInitialSRSData(),
           createdAt: now,
           updatedAt: now,

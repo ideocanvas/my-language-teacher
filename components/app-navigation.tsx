@@ -41,11 +41,15 @@ export function AppNavigation() {
                   key={item.href}
                   href={item.href}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                    isActive
-                      ? "bg-blue-100 text-blue-700"
-                      : isTranslateButton
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "text-gray-600 hover:bg-gray-100"
+                    (() => {
+                      if (isActive) {
+                        return "bg-blue-100 text-blue-700";
+                      }
+                      if (isTranslateButton) {
+                        return "bg-green-600 text-white hover:bg-green-700";
+                      }
+                      return "text-gray-600 hover:bg-gray-100";
+                    })()
                   }`}
                 >
                   <Icon className="w-4 h-4" />

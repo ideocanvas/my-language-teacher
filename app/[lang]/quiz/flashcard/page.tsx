@@ -94,11 +94,6 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     router.push(`/${lang}/quiz`);
   };
 
-  const handleQuit = async () => {
-    await completeQuiz();
-    router.push(`/${lang}/quiz`);
-  };
-
   if (quizLoading || !dailyReview) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -195,9 +190,15 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         {/* Flashcard */}
         {currentWord && (
           <div className="relative">
-            <div
+            <button
               onClick={handleFlip}
-              className={`bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8 min-h-[400px] cursor-pointer transition-all duration-500 ${
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleFlip();
+                }
+              }}
+              className={`w-full text-left bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8 min-h-[400px] cursor-pointer transition-all duration-500 ${
                 flipped ? "border-blue-300" : "hover:border-blue-200"
               }`}
             >
@@ -278,7 +279,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           </div>
         )}
 

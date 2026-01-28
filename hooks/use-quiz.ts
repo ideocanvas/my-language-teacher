@@ -18,7 +18,7 @@ export function useQuiz() {
         const wordIds = words.map((w) => w.id);
 
         const session: QuizSession = {
-          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
           type,
           words: wordIds,
           currentIndex: 0,
