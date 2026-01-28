@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(',') || [],
 };
 
-export default nextConfig;
-
 // added by create cloudflare to enable calling `getCloudflareContext()` in `next dev`
 import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 initOpenNextCloudflareForDev();
+
+export default nextConfig;

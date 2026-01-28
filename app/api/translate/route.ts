@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       apiKey: llmApiKey,
       model: llmModel,
     });
-
+    console.log("Translating text:", { text, sourceLanguage, targetLanguage });
+    console.log("Using LLM settings:", { llmApiUrl, llmModel, llmApiKey: llmApiKey  });
     // Perform translation
     const translatedText = await client.translateText(
       text,
