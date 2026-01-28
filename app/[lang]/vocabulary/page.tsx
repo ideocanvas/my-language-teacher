@@ -1,0 +1,367 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppNavigation } from "@/components/app-navigation";
+import { useVocabulary } from "@/hooks/use-vocabulary";
+import { getDaysUntilReview } from "@/lib/srs-algorithm";
+import {
+  Search,
+  Filter,
+  Volume2,
+  Calendar,
+  Tag,
+  Trash2,
+  Edit,
+  Plus,
+} from "lucide-react";
+import { toast } from "sonner";
+
+export default function VocabularyListPage({ params }: { params: Promise<{ lang: string }> }) {
+  const [lang, setLang] = useState("en");
+  const router = useRouter();
+  const { vocabulary, loading, deleteWord, getAllTags } = useVocabulary();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<number[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    const loadParams = async () => {
+      const resolvedParams = await params;
+      const validLang = resolvedParams.lang === "zh" ? "zh" : "en";
+      setLang(validLang);
+    };
+    loadParams();
+  }, [params]);
+
+  const allTags = getAllTags();
+
+  const speakWord = async (word: string) => {
+    try {
+      const { speakText } = await import("@/lib/tts-utils");
+      await speakText(word, lang === "zh" ? "zh-CN" : "en-US");
+    } catch (err) {
+      console.error("Failed to speak word:", err);
+      toast.error("Failed to play pronunciation");
+    }
+  };
+
+  const handleDelete = async (id: string, word: string) => {
+    if (window.confirm(`Are you sure you want to delete "${word}"?`)) {
+      try {
+        await deleteWord(id);
+        toast.success(`Deleted "${word}"`);
+      } catch (err) {
+        console.error("Failed to delete word:", err);
+      }
+    }
+  };
+
+  // Filter vocabulary
+  const filteredVocabulary = vocabulary.filter((entry) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        entry.word.toLowerCase().includes(query) ||
+        entry.translation.toLowerCase().includes(query) ||
+        entry.tags.some((tag) => tag.toLowerCase().includes(query));
+
+      if (!matchesSearch) return false;
+    }
+
+    // Tag filter
+    if (selectedTags.length > 0) {
+      const hasSelectedTag = selectedTags.some((tag) => entry.tags.includes(tag));
+      if (!hasSelectedTag) return false;
+    }
+
+    // Difficulty filter
+    if (selectedDifficulty.length > 0) {
+      if (!selectedDifficulty.includes(entry.difficulty)) return false;
+    }
+
+    return true;
+  });
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const toggleDifficulty = (difficulty: number) => {
+    setSelectedDifficulty((prev) =>
+      prev.includes(difficulty) ? prev.filter((d) => d !== difficulty) : [...prev, difficulty]
+    );
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedTags([]);
+    setSelectedDifficulty([]);
+  };
+
+  const hasFilters = searchQuery || selectedTags.length > 0 || selectedDifficulty.length > 0;
+
+  const getDifficultyColor = (difficulty: number) => {
+    switch (difficulty) {
+      case 1:
+        return "bg-green-100 text-green-800";
+      case 2:
+        return "bg-blue-100 text-blue-800";
+      case 3:
+        return "bg-yellow-100 text-yellow-800";
+      case 4:
+        return "bg-orange-100 text-orange-800";
+      case 5:
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AppNavigation />
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Vocabulary</h1>
+            <p className="text-gray-600 mt-1">
+              {vocabulary.length} word{vocabulary.length === 1 ? "" : "s"} in your collection
+            </p>
+          </div>
+          <button
+            onClick={() => router.push(`/${lang}/vocabulary/add`)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>Add Word</span>
+          </button>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex space-x-3 mb-4">
+            <div className="flex-1 relative">
+              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search words, translations, or tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors ${
+                hasFilters
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              <Filter className="w-5 h-5" />
+              <span className="hidden sm:inline">Filters</span>
+            </button>
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {showFilters && (
+            <div className="border-t pt-4">
+              {/* Tag filters */}
+              {allTags.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Tag className="w-4 h-4 mr-1" />
+                    Tags
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => toggleTag(tag)}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          selectedTags.includes(tag)
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Difficulty filters */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Difficulty</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => toggleDifficulty(level)}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        selectedDifficulty.includes(level)
+                          ? getDifficultyColor(level)
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {level}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Vocabulary List */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading vocabulary...</p>
+          </div>
+        ) : filteredVocabulary.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            {hasFilters ? (
+              <>
+                <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No matching words</h3>
+                <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
+                <button
+                  onClick={clearFilters}
+                  className="text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Clear filters
+                </button>
+              </>
+            ) : (
+              <>
+                <Plus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No vocabulary yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Start building your vocabulary by adding new words
+                </p>
+                <button
+                  onClick={() => router.push(`/${lang}/vocabulary/add`)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Add your first word
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredVocabulary.map((entry) => {
+              const daysUntilReview = getDaysUntilReview(entry.srsData);
+              const isDue = daysUntilReview === 0;
+
+              return (
+                <div
+                  key={entry.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-blue-300 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {/* Word and pronunciation */}
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-xl font-bold text-gray-900">{entry.word}</h3>
+                        {entry.pronunciation && (
+                          <span className="text-gray-500 text-sm font-mono">
+                            /{entry.pronunciation}/
+                          </span>
+                        )}
+                        <button
+                          onClick={() => speakWord(entry.word)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </button>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
+                            entry.difficulty
+                          )}`}
+                        >
+                          {entry.difficulty}
+                        </span>
+                      </div>
+
+                      {/* Translation */}
+                      <p className="text-lg text-gray-700 mb-3">{entry.translation}</p>
+
+                      {/* Tags */}
+                      {entry.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {entry.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Example sentence */}
+                      {entry.exampleSentences.length > 0 && (
+                        <p className="text-gray-600 text-sm italic mb-3">
+                          "{entry.exampleSentences[0]}"
+                        </p>
+                      )}
+
+                      {/* Next review */}
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {isDue ? (
+                          <span className="text-orange-600 font-medium">Due for review</span>
+                        ) : (
+                          <span>
+                            Review in {daysUntilReview} day{daysUntilReview !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex space-x-2 ml-4">
+                      <button
+                        onClick={() => router.push(`/${lang}/vocabulary/${entry.id}`)}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Edit"
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry.id, entry.word)}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
