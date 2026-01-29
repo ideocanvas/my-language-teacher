@@ -5,10 +5,11 @@ import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { Check, Home, RotateCw, Volume2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { getTranslations, type Locale } from "@/lib/client-i18n";
 
 export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: string }> }) {
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState<Locale>("en");
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {
@@ -94,12 +95,14 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     router.push(`/${lang}/quiz`);
   };
 
+  const t = useMemo(() => getTranslations(lang), [lang]);
+
   if (quizLoading || !dailyReview) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm sm:text-base">Loading quiz...</p>
+          <p className="text-gray-600 text-sm sm:text-base">{t("quiz.flashcard.loading")}</p>
         </div>
       </div>
     );
@@ -112,13 +115,13 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         <div className="max-w-2xl mx-auto px-4 py-8 sm:py-16 text-center">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-12">
             <Check className="w-12 h-12 sm:w-16 sm:h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">All caught up!</h2>
-            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">No words due for review right now</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("quiz.flashcard.allCaughtUp")}</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">{t("quiz.flashcard.noWordsDue")}</p>
             <button
               onClick={() => router.push(`/${lang}`)}
               className="bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
-              Go to Dashboard
+              {t("quiz.flashcard.goToDashboard")}
             </button>
           </div>
         </div>
@@ -138,11 +141,11 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
             >
               <Home className="w-5 h-5 sm:w-6 sm:h-6 mx-auto" />
             </button>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No active quiz</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{t("quiz.flashcard.noActiveQuiz")}</h2>
             <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               {dailyReview.dueCount > 0
-                ? "Click below to start reviewing your due words"
-                : "Add some vocabulary to start learning"}
+                ? t("quiz.flashcard.clickToStart")
+                : t("quiz.flashcard.addVocabulary")}
             </p>
             {dailyReview.dueCount > 0 && (
               <button
@@ -152,7 +155,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                 }}
                 className="bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
-                Start Review ({dailyReview.dueCount} words)
+                {t("quiz.flashcard.startReview", { count: dailyReview.dueCount })}
               </button>
             )}
           </div>
@@ -170,13 +173,13 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         <div className="mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs sm:text-sm text-gray-600">
-              Card {Math.min(progress.current + 1, progress.total)} of {progress.total}
+              {t("quiz.flashcard.cardProgress", { current: Math.min(progress.current + 1, progress.total), total: progress.total })}
             </span>
             <button
               onClick={handleCancel}
               className="text-xs sm:text-sm text-gray-500 hover:text-gray-700"
             >
-              Quit
+              {t("quiz.flashcard.quit")}
             </button>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -241,7 +244,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                       </div>
                     )}
 
-                    <p className="text-xs sm:text-sm text-gray-400 mt-3 sm:mt-4">Click to flip back</p>
+                    <p className="text-xs sm:text-sm text-gray-400 mt-3 sm:mt-4">{t("quiz.flashcard.clickToFlipBack")}</p>
                   </div>
                 ) : (
                   // Front of card
@@ -275,7 +278,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                       </div>
                     )}
 
-                    <p className="text-xs sm:text-sm text-gray-400 mt-6 sm:mt-8">Click to reveal answer</p>
+                    <p className="text-xs sm:text-sm text-gray-400 mt-6 sm:mt-8">{t("quiz.flashcard.clickToReveal")}</p>
                   </div>
                 )}
               </div>
@@ -286,34 +289,34 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         {/* Rating buttons */}
         {flipped && currentWord && (
           <div className="mt-4 sm:mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 animate-slide-up">
-            <p className="text-center text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">How well did you know this?</p>
+            <p className="text-center text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">{t("quiz.flashcard.howWellDidYouKnow")}</p>
             <div className="grid grid-cols-4 gap-2 sm:gap-4">
               <button
                 onClick={() => handleRate(0)}
                 className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200"
               >
-                <div className="text-xs sm:text-sm hidden sm:inline">Again</div>
+                <div className="text-xs sm:text-sm hidden sm:inline">{t("quiz.flashcard.again")}</div>
                 <X className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(1)}
                 className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"
               >
-                <div className="text-xs sm:text-sm hidden sm:inline">Hard</div>
+                <div className="text-xs sm:text-sm hidden sm:inline">{t("quiz.flashcard.hard")}</div>
                 <RotateCw className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(3)}
                 className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
               >
-                <div className="text-xs sm:text-sm hidden sm:inline">Good</div>
+                <div className="text-xs sm:text-sm hidden sm:inline">{t("quiz.flashcard.good")}</div>
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(5)}
                 className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200"
               >
-                <div className="text-xs sm:text-sm hidden sm:inline">Easy</div>
+                <div className="text-xs sm:text-sm hidden sm:inline">{t("quiz.flashcard.easy")}</div>
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
             </div>
@@ -323,8 +326,8 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
         {/* Instructions */}
         {!flipped && (
           <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500">
-            <p>Click the card to reveal the answer</p>
-            <p>Rate your knowledge to schedule the next review</p>
+            <p>{t("quiz.flashcard.instructions")}</p>
+            <p>{t("quiz.flashcard.rateKnowledge")}</p>
           </div>
         )}
       </main>

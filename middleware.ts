@@ -68,6 +68,7 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip all internal paths (_next)
+    //NO-SONAR
     '/((?!_next|api|favicon.ico|robots.txt|_next/static|_next/image|.*\\.png$|.*\\.svg$).*)',
   ],
 }

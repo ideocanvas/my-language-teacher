@@ -31,7 +31,6 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
     initializeSync,
     startSync,
     resetSync,
-    formatLastSync,
   } = useSync();
 
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -173,6 +172,18 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
           <ConnectionStatus
             state={connectionState}
             role={role}
+            translations={{
+              waitingForConnection: t("connection.waitingForConnection"),
+              establishingConnection: t("connection.establishingConnection"),
+              waitingForVerification: t("connection.waitingForVerification"),
+              pleaseVerifyConnection: t("connection.pleaseVerifyConnection"),
+              connectedAndReady: t("connection.connectedAndReady"),
+              transferringFiles: t("connection.transferringFiles"),
+              connectionLost: t("connection.connectionLost"),
+              unknownStatus: t("connection.unknownStatus"),
+              receivingMode: t("connection.receivingMode"),
+              sendingMode: t("connection.sendingMode"),
+            }}
           />
         </div>
 

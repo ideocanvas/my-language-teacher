@@ -18,7 +18,7 @@ import {
 import { toast } from "sonner";
 
 interface DashboardClientProps {
-  lang: Locale;
+  readonly lang: Locale;
 }
 
 export function DashboardClient({ lang }: DashboardClientProps) {

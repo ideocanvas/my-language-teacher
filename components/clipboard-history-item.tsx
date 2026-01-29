@@ -3,14 +3,13 @@
 import { Copy, X, Send } from "lucide-react";
 import { toast } from "sonner";
 import { ClipboardHistoryItem as ClipboardHistoryItemType } from "@/lib/types";
-import { indexedDBStorage } from "@/lib/indexed-db";
 
 interface ClipboardHistoryItemProps {
-  item: ClipboardHistoryItemType;
-  connectionState: string;
-  onDelete: (id: string) => void;
-  onSend: (item: ClipboardHistoryItemType) => void;
-  t: (key: string) => string;
+  readonly item: ClipboardHistoryItemType;
+  readonly connectionState: string;
+  readonly onDelete: (id: string) => void;
+  readonly onSend: (item: ClipboardHistoryItemType) => void;
+  readonly t: (key: string) => string;
 }
 
 export function ClipboardHistoryItem({
@@ -66,7 +65,7 @@ export function ClipboardHistoryItem({
     }
 
     if (['image', 'file'].includes(item.type)) {
-      return !!(navigator.clipboard && navigator.clipboard.write);
+      return !!(navigator.clipboard?.write);
     }
 
     return false;
@@ -82,10 +81,11 @@ export function ClipboardHistoryItem({
       a.download = item.fileName || `download-${item.id}`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
       toast.success(t("clipboard.fileDownloaded"));
     } catch (err) {
+      console.error('Download failed:', err);
       toast.error(t("clipboard.downloadFailed"));
     }
   };

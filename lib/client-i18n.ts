@@ -9,30 +9,40 @@ const translations = {
   zh: zhTranslations,
 };
 
+// Helper function to get nested value from translations object
+const getNestedValue = (keys: string[], translationSet: Record<string, unknown>): unknown => {
+  let value: unknown = translationSet;
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in (value as Record<string, unknown>)) {
+      value = (value as Record<string, unknown>)[k];
+    } else {
+      return undefined;
+    }
+  }
+  
+  return value;
+};
+
 export const getTranslations = (locale: Locale): (key: string, params?: Record<string, string | number>) => string => {
   const t = (key: string, params?: Record<string, string | number>) => {
     const keys = key.split('.');
-    let value: unknown = translations[locale];
     
-    for (const k of keys) {
-      if (value && typeof value === 'object' && k in (value as Record<string, unknown>)) {
-        value = (value as Record<string, unknown>)[k];
-      } else {
-        // Fallback to English if translation not found
-        value = translations.en;
-        for (const k of keys) {
-          if (value && typeof value === 'object' && k in (value as Record<string, unknown>)) {
-            value = (value as Record<string, unknown>)[k];
-          } else {
-            return key; // Return key if translation not found
-          }
-        }
-        break;
-      }
+    // Try to get value from current locale
+    let value = getNestedValue(keys, translations[locale] as Record<string, unknown>);
+    
+    // Fallback to English if translation not found
+    if (value === undefined) {
+      value = getNestedValue(keys, translations.en as Record<string, unknown>);
+    }
+    
+    // Return key if translation not found
+    if (value === undefined) {
+      return key;
     }
     
     if (typeof value === 'string' && params) {
-      return value.replace(/\{\{(\w+)\}\}/g, (match, param) => {
+      return value.replaceAll(/\{\{(\w+)\}\}/g, (match: string, param: string) => {
         return params[param]?.toString() || match;
       });
     }

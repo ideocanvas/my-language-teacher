@@ -47,9 +47,95 @@
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirm": "Are you sure you want to delete \"{{word}}\"?",
-    "deleted": "Deleted \"{{word}}\""
+    "deleted": "Deleted \"{{word}}\"",
+    "clearFiltersBtn": "Clear filters",
+    "speakError": "Failed to speak word",
+    "pronunciationError": "Failed to play pronunciation",
+    "deleteError": "Failed to delete word"
+  },
+  "translate": {
+    "enterText": "Please enter text to translate",
+    "alreadyExists": "This word is already in your vocabulary",
+    "foundSuggestions": "Found {{count}} words to learn!",
+    "sentenceTranslated": "Sentence translated!",
+    "saved": "Translation saved to vocabulary!",
+    "failed": "Translation failed. Please try again.",
+    "saveFailed": "Failed to save word",
+    "savedWord": "\"{{word}}\" saved!",
+    "camera": {
+      "failed": "Failed to access camera. Please check permissions.",
+      "start": "Capture text from camera",
+      "title": "Camera",
+      "tapToCapture": "Tap to capture text",
+      "starting": "Starting camera...",
+      "noTextFound": "No text found in the image. Try again with clearer text.",
+      "extractSuccess": "Text extracted from image!",
+      "extractFail": "Failed to extract text from image"
+    },
+    "placeholder": {
+      "enter": "Enter text to translate...",
+      "translation": "Translation will appear here..."
+    },
+    "chars": "{{count}} chars",
+    "button": {
+      "translating": "Translating...",
+      "translate": "Translate"
+    },
+    "suggestions": {
+      "title": "Words to Learn from This Sentence",
+      "desc": "Click the + button to save words to your vocabulary",
+      "listen": "Listen",
+      "save": "Save to vocabulary",
+      "saved": "Saved"
+    },
+    "quickActions": {
+      "viewVocab": "View Vocabulary",
+      "vocabCount": "{{count}} word{{plural}} saved",
+      "takeQuiz": "Take a Quiz",
+      "quizDesc": "Practice what you've learned"
+    }
   },
   "quiz": {
+    "hub": {
+      "title": "Quizzes",
+      "wordsDue": "{{count}} word{{plural}} due for review",
+      "startSession": "Start a practice session to improve your vocabulary",
+      "startQuiz": "Start Quiz",
+      "aboutTitle": "About Quiz Modes",
+      "about": {
+        "srsTitle": "Spaced Repetition",
+        "srsDesc": "Words are scheduled based on how well you know them. Words you struggle with appear more frequently.",
+        "goalTitle": "Daily Goal",
+        "goalDesc": "Review your due words each day to build long-term memory and track your progress streak."
+      },
+      "noWords": {
+        "title": "No words to quiz",
+        "desc": "Add some vocabulary first before taking a quiz",
+        "action": "Add Your First Word"
+      }
+    },
+    "modes": {
+      "flashcard": {
+        "title": "Flashcards",
+        "desc": "Classic flip cards with spaced repetition"
+      },
+      "multipleChoice": {
+        "title": "Multiple Choice",
+        "desc": "Select the correct answer from options"
+      },
+      "fillBlank": {
+        "title": "Fill in the Blank",
+        "desc": "Complete sentences with missing words"
+      },
+      "typing": {
+        "title": "Typing Practice",
+        "desc": "Type the correct translation or word"
+      },
+      "listening": {
+        "title": "Listening Practice",
+        "desc": "Listen and type what you hear"
+      }
+    },
     "flashcard": {
       "loading": "Loading quiz...",
       "allCaughtUp": "All caught up!",
@@ -236,5 +322,79 @@
     "sync": "Sync",
     "translate": "Translate",
     "ai": "AI Assistant"
+  },
+  "connection": {
+    "waitingForConnection": "Waiting for connection...",
+    "establishingConnection": "Establishing connection...",
+    "waitingForVerification": "Waiting for receiver verification...",
+    "pleaseVerifyConnection": "Please verify the connection",
+    "connectedAndReady": "Connected and ready",
+    "transferringFiles": "Transferring files...",
+    "connectionLost": "Connection lost",
+    "unknownStatus": "Unknown status",
+    "receivingMode": "Receiving mode",
+    "sendingMode": "Sending mode",
+    "connectionLogs": "Connection Logs"
+  },
+  "settings": {
+    "header": {
+      "title": "Settings",
+      "subtitle": "Configure your learning experience"
+    },
+    "tabs": {
+      "general": "General",
+      "data": "Data Management",
+      "sync": "Sync"
+    },
+    "general": {
+      "languageSettings": "Language Settings",
+      "sourceLanguage": "Source Language",
+      "targetLanguage": "Target Language",
+      "srsSettings": "Spaced Repetition Settings",
+      "dailyGoal": "Daily Review Goal",
+      "dailyGoalDesc": "Number of words to review each day",
+      "easyBonus": "Easy Card Bonus",
+      "easyBonusDesc": "Multiplier for easy cards (default: 1.3)",
+      "intervalModifier": "Interval Modifier",
+      "intervalModifierDesc": "Multiplier for all intervals (default: 1.0)"
+    },
+    "data": {
+      "exportImport": "Export/Import Data",
+      "exportImportDesc": "Back up your vocabulary data or restore from a backup file",
+      "export": "Export Data",
+      "import": "Import Data",
+      "stats": "Statistics",
+      "totalWords": "Total Words",
+      "tagged": "Tagged",
+      "tags": "Tags",
+      "withExamples": "With Examples",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDesc": "Actions here cannot be undone",
+      "clearData": "Clear All Data"
+    },
+    "actions": {
+      "save": "Save Settings",
+      "saveSuccess": "Settings saved successfully",
+      "reset": "Reset to Defaults",
+      "resetConfirm": "Are you sure you want to reset all settings to defaults?",
+      "resetSuccess": "Settings reset to defaults",
+      "clearConfirm": "Are you sure you want to clear all vocabulary data? This cannot be undone.",
+      "clearSuccess": "All data cleared",
+      "importConfirm": "Do you want to clear existing data before importing? (Cancel to merge)",
+      "importSuccessClean": "Data imported (clean)",
+      "importSuccessMerge": "Data imported (merged)",
+      "exportSuccess": "Data exported successfully"
+    },
+    "languages": {
+      "en": "English",
+      "zh": "Chinese (Simplified)",
+      "zh-TW": "Chinese (Traditional)",
+      "ja": "Japanese",
+      "ko": "Korean",
+      "es": "Spanish",
+      "fr": "French",
+      "de": "German",
+      "it": "Italian"
+    }
   }
 }
