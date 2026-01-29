@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useSettings } from "@/hooks/use-settings";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { languageStorage } from "@/lib/language-storage";
@@ -414,6 +415,8 @@ export function SettingsClient({ lang }: Readonly<SettingsClientProps>) {
           </div>
         )}
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

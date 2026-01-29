@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { useSettings } from "@/hooks/use-settings";
 import { WordSuggestion } from "@/lib/vocabulary-types";
@@ -871,6 +872,8 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
           </button>
         </div>
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { SyncPanel } from "@/components/sync-panel";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -47,6 +48,8 @@ export function SyncClient({ lang }: SyncClientProps) {
         {/* Sync Panel */}
         <SyncPanel role={role} sessionId={sessionId || undefined} />
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

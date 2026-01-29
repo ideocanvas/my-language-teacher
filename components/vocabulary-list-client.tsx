@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { getDaysUntilReview } from "@/lib/srs-algorithm";
 import {
@@ -374,6 +375,8 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
           );
         })()}
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

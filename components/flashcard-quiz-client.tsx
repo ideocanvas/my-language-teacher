@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { Check, Home, RotateCw, Volume2, X } from "lucide-react";
@@ -325,6 +326,8 @@ export function FlashcardQuizClient({ lang }: Readonly<FlashcardQuizClientProps>
           </div>
         )}
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

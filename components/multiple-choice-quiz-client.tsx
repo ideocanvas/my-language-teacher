@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { Check, Home, Volume2, X } from "lucide-react";
@@ -318,7 +319,9 @@ export function MultipleChoiceQuizClient({ lang }: Readonly<MultipleChoiceQuizCl
             </button>
           </div>
         )}
-      </main>
-    </div>
-  );
+    </main>
+
+    <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
+  </div>
+);
 }

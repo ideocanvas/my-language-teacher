@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
 import { ArrowRight, Book, Brain, Keyboard, Shuffle, Volume2 } from "lucide-react";
@@ -147,6 +148,8 @@ export function QuizHubClient({ lang }: Readonly<QuizHubClientProps>) {
           </div>
         )}
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

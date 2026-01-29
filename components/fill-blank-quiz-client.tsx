@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { Check, Home, Volume2, Eye, EyeOff } from "lucide-react";
@@ -363,6 +364,8 @@ export function FillBlankQuizClient({ lang }: Readonly<FillBlankQuizClientProps>
           )}
         </div>
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

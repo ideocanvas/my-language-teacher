@@ -1,6 +1,7 @@
 "use client";
 
 import { AppNavigation } from "@/components/app-navigation";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { ChatMessage } from "@/lib/vocabulary-types";
 import { type Locale, getTranslations } from "@/lib/client-i18n";
 import {
@@ -471,6 +472,8 @@ export function AIClient({ lang }: AIClientProps) {
           </div>
         )}
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
 import {
@@ -281,6 +282,8 @@ export function DashboardClient({ lang }: DashboardClientProps) {
           {renderRecentWordsContent()}
         </div>
       </main>
+
+      <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />
     </div>
   );
 }
