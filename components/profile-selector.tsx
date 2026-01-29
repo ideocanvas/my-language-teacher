@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Profile } from "@/lib/profile-types";
 import { useProfiles } from "@/hooks/use-profiles";
+import { locales, defaultLocale, type Locale, getTranslations } from "@/lib/client-i18n";
+import { usePathname } from "next/navigation";
 import {
   User,
   Plus,
@@ -25,6 +27,21 @@ const PROFILE_COLORS = [
 ];
 
 export function ProfileSelector() {
+  const pathname = usePathname();
+  
+  // Extract current locale from pathname
+  const currentLocale = useMemo<Locale>(() => {
+    if (!pathname) return defaultLocale;
+    const segments = pathname.split('/');
+    const firstSegment = segments[1];
+    if (locales.includes(firstSegment as Locale)) {
+      return firstSegment as Locale;
+    }
+    return defaultLocale;
+  }, [pathname]);
+
+  const t = useMemo(() => getTranslations(currentLocale), [currentLocale]);
+
   const {
     profiles,
     currentProfile,
@@ -44,7 +61,7 @@ export function ProfileSelector() {
 
   const handleCreateProfile = () => {
     if (!newProfileName.trim()) {
-      toast.error("Please enter a profile name");
+      toast.error(t("profiles.enterName"));
       return;
     }
     addProfile(newProfileName.trim(), selectedColor);
@@ -55,10 +72,10 @@ export function ProfileSelector() {
 
   const handleDeleteProfile = (profile: Profile) => {
     if (profiles.length <= 1) {
-      toast.error("Cannot delete the last profile");
+      toast.error(t("profiles.cannotDeleteLast"));
       return;
     }
-    if (globalThis.confirm(`Are you sure you want to delete "${profile.name}"?\n\nAll data for this profile will be permanently deleted.`)) {
+    if (globalThis.confirm(t("profiles.deleteConfirm", { name: profile.name }))) {
       removeProfile(profile.id);
       setIsOpen(false);
     }
@@ -72,7 +89,7 @@ export function ProfileSelector() {
   const handleSaveEdit = () => {
     if (!editingProfile) return;
     if (!editName.trim()) {
-      toast.error("Profile name cannot be empty");
+      toast.error(t("profiles.emptyName"));
       return;
     }
     editProfile(editingProfile.id, { name: editName.trim() });
@@ -92,7 +109,7 @@ export function ProfileSelector() {
     return (
       <button className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-600">
         <User className="w-5 h-5" />
-        <span className="hidden sm:inline">Loading...</span>
+        <span className="hidden sm:inline">{t("profiles.loading")}</span>
       </button>
     );
   }
@@ -126,8 +143,8 @@ export function ProfileSelector() {
           <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 z-50 py-2">
             {/* Header */}
             <div className="px-4 py-2 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-900">Profiles</h3>
-              <p className="text-sm text-gray-500">Switch between different learning profiles</p>
+              <h3 className="font-semibold text-gray-900">{t("profiles.title")}</h3>
+              <p className="text-sm text-gray-500">{t("profiles.description")}</p>
             </div>
 
             {/* Profile List */}
@@ -180,7 +197,7 @@ export function ProfileSelector() {
                         <div className="text-left">
                           <p className="font-medium text-gray-900">{profile.name}</p>
                           {profile.id === currentProfile.id && (
-                            <p className="text-xs text-blue-600">Current</p>
+                            <p className="text-xs text-blue-600">{t("profiles.current")}</p>
                           )}
                         </div>
                       </button>
@@ -188,14 +205,14 @@ export function ProfileSelector() {
                         <button
                           onClick={() => handleEditProfile(profile)}
                           className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                          title="Edit name"
+                          title={t("profiles.editName")}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteProfile(profile)}
                           className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Delete profile"
+                          title={t("profiles.delete")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -211,7 +228,7 @@ export function ProfileSelector() {
               <div className="px-4 py-3 border-t border-gray-100 space-y-3">
                 <input
                   type="text"
-                  placeholder="Profile name"
+                  placeholder={t("profiles.placeholder")}
                   value={newProfileName}
                   onChange={(e) => setNewProfileName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -238,7 +255,7 @@ export function ProfileSelector() {
                     onClick={handleCreateProfile}
                     className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
                   >
-                    Create
+                    {t("profiles.createButton")}
                   </button>
                   <button
                     onClick={() => {
@@ -247,7 +264,7 @@ export function ProfileSelector() {
                     }}
                     className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-200"
                   >
-                    Cancel
+                    {t("profiles.cancel")}
                   </button>
                 </div>
               </div>
@@ -257,7 +274,7 @@ export function ProfileSelector() {
                 className="w-full px-4 py-3 flex items-center space-x-2 text-blue-600 hover:bg-blue-50 border-t border-gray-100"
               >
                 <Plus className="w-5 h-5" />
-                <span className="font-medium">Create New Profile</span>
+                <span className="font-medium">{t("profiles.create")}</span>
               </button>
             )}
           </div>

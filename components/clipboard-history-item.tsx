@@ -30,7 +30,7 @@ export function ClipboardHistoryItem({
         case 'contact':
         case 'rich-text':
           await navigator.clipboard.writeText(item.content);
-          toast.success(t("common.copied"));
+          toast.success(t("clipboard.copied"));
           break;
         case 'image':
         case 'file':
@@ -46,17 +46,17 @@ export function ClipboardHistoryItem({
               [item.mimeType || 'application/octet-stream']: blob
             });
             await navigator.clipboard.write([clipboardItem]);
-            toast.success(`${item.type === 'image' ? 'Image' : 'File'} copied to clipboard`);
+            toast.success(t("clipboard.fileCopied").replace("{{type}}", item.type === 'image' ? t("clipboard.image") : t("clipboard.file")));
           } else {
-            toast.error("No file data available to copy");
+            toast.error(t("clipboard.noFileData"));
           }
           break;
         default:
-          toast.error("Unsupported content type");
+          toast.error(t("clipboard.unsupportedType"));
       }
     } catch (err) {
       console.error('Copy failed:', err);
-      toast.error("Failed to copy to clipboard - browser may not support this file type");
+      toast.error(t("clipboard.copyFailed"));
     }
   };
 
@@ -84,9 +84,9 @@ export function ClipboardHistoryItem({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success("File downloaded");
+      toast.success(t("clipboard.fileDownloaded"));
     } catch (err) {
-      toast.error("Failed to download file");
+      toast.error(t("clipboard.downloadFailed"));
     }
   };
 
@@ -100,7 +100,7 @@ export function ClipboardHistoryItem({
       <div className="flex justify-between items-start mb-2">
         <span className="text-xs text-gray-500">
           {new Date(item.timestamp).toLocaleString()}
-          {item.isLocal ? ' (Sent)' : ' (Received)'}
+          {item.isLocal ? ` (${t("clipboard.sent")})` : ` (${t("clipboard.received")})`}
         </span>
         <div className="flex space-x-2">
           {/* Send Button - Always show if connected */}
@@ -108,7 +108,7 @@ export function ClipboardHistoryItem({
             onClick={() => onSend(item)}
             disabled={connectionState !== "connected"}
             className={`${connectionState === "connected" ? 'text-green-600 hover:text-green-700' : 'text-gray-400 cursor-not-allowed'}`}
-            title={connectionState === "connected" ? "Send to peer" : "No active connection"}
+            title={connectionState === "connected" ? t("clipboard.sendToPeer") : t("clipboard.noConnection")}
           >
             <Send className="w-4 h-4" />
           </button>
@@ -118,7 +118,7 @@ export function ClipboardHistoryItem({
             <button
               onClick={() => handleDownloadFile(item)}
               className="text-green-600 hover:text-green-700"
-              title="Download"
+              title={t("clipboard.download")}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -131,7 +131,7 @@ export function ClipboardHistoryItem({
             <button
               onClick={() => handleCopyToClipboard(item)}
               className="text-blue-600 hover:text-blue-700"
-              title="Copy"
+              title={t("clipboard.copy")}
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -141,7 +141,7 @@ export function ClipboardHistoryItem({
           <button
             onClick={() => onDelete(item.id)}
             className="text-red-600 hover:text-red-700"
-            title="Delete"
+            title={t("clipboard.delete")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -191,7 +191,7 @@ export function ClipboardHistoryItem({
 
       {item.type === 'html' && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">HTML Content</p>
+          <p className="text-sm text-gray-600">{t("clipboard.htmlContent")}</p>
           <div
             className="text-xs bg-gray-50 p-2 rounded border max-h-32 overflow-y-auto"
             dangerouslySetInnerHTML={{ __html: item.content }}
@@ -202,7 +202,7 @@ export function ClipboardHistoryItem({
       {item.type === 'code' && (
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">Code Snippet</p>
+            <p className="text-sm text-gray-600">{t("clipboard.codeSnippet")}</p>
             {item.metadata?.language && (
               <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                 {item.metadata.language}
@@ -217,7 +217,7 @@ export function ClipboardHistoryItem({
 
       {item.type === 'url' && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">URL</p>
+          <p className="text-sm text-gray-600">{t("clipboard.url")}</p>
           <a
             href={item.metadata?.url || item.content}
             target="_blank"
@@ -231,7 +231,7 @@ export function ClipboardHistoryItem({
 
       {item.type === 'rich-text' && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">Rich Text</p>
+          <p className="text-sm text-gray-600">{t("clipboard.richText")}</p>
           <div
             className="text-sm bg-gray-50 p-2 rounded border max-h-32 overflow-y-auto"
             dangerouslySetInnerHTML={{ __html: item.content }}
@@ -241,7 +241,7 @@ export function ClipboardHistoryItem({
 
       {item.type === 'contact' && (
         <div className="space-y-2">
-          <p className="text-sm text-gray-600">Contact Information</p>
+          <p className="text-sm text-gray-600">{t("clipboard.contactInfo")}</p>
           <div className="max-h-32 overflow-y-auto">
             <p className="text-sm whitespace-pre-wrap break-words">
               {item.content}

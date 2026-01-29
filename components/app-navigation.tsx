@@ -12,28 +12,45 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ProfileSelector } from "./profile-selector";
-import { useState } from "react";
-
-const navItems = [
-  { href: "/en/vocabulary", icon: BookOpen, label: "Vocabulary" },
-  { href: "/en/quiz", icon: Brain, label: "Quiz" },
-  { href: "/en/ai", icon: Sparkles, label: "AI Assistant" },
-  { href: "/en/translate", icon: ArrowRight, label: "Translate" },
-  { href: "/en/settings", icon: Settings, label: "Settings" },
-];
+import { useState, useMemo } from "react";
+import { locales, defaultLocale, type Locale, getTranslations } from "@/lib/client-i18n";
 
 export function AppNavigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Extract current locale from pathname
+  const currentLocale = useMemo<Locale>(() => {
+    if (!pathname) return defaultLocale;
+    const segments = pathname.split('/');
+    const firstSegment = segments[1];
+    if (locales.includes(firstSegment as Locale)) {
+      return firstSegment as Locale;
+    }
+    return defaultLocale;
+  }, [pathname]);
+
+  const t = useMemo(() => getTranslations(currentLocale), [currentLocale]);
+
+  // Build nav items with current locale
+  const navItems = useMemo(() => {
+    return [
+      { path: "/vocabulary", icon: BookOpen, label: t("navigation.vocabulary"), href: `/${currentLocale}/vocabulary` },
+      { path: "/quiz", icon: Brain, label: t("navigation.quiz"), href: `/${currentLocale}/quiz` },
+      { path: "/ai", icon: Sparkles, label: t("navigation.ai"), href: `/${currentLocale}/ai` },
+      { path: "/translate", icon: ArrowRight, label: t("navigation.translate"), href: `/${currentLocale}/translate` },
+      { path: "/settings", icon: Settings, label: t("navigation.settings"), href: `/${currentLocale}/settings` },
+    ];
+  }, [currentLocale, t]);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/en" className="flex items-center space-x-2">
+          <Link href={`/${currentLocale}`} className="flex items-center space-x-2">
             <BookOpen className="w-6 h-6 text-blue-600" />
-            <span className="font-bold text-lg text-gray-900 hidden sm:inline">Language Teacher</span>
+            <span className="font-bold text-lg text-gray-900 hidden sm:inline">{t("metadata.title")}</span>
             <span className="font-bold text-lg text-gray-900 sm:hidden">LT</span>
           </Link>
 
@@ -42,7 +59,7 @@ export function AppNavigation() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-              const isTranslateButton = item.href === "/en/translate";
+              const isTranslateButton = item.path === "/translate";
 
               return (
                 <Link
@@ -94,7 +111,7 @@ export function AppNavigation() {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-                const isTranslateButton = item.href === "/en/translate";
+                const isTranslateButton = item.path === "/translate";
 
                 return (
                   <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSync } from "@/hooks/use-sync";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useSettings } from "@/hooks/use-settings";
@@ -11,6 +11,7 @@ import { ConnectionStatus } from "@/components/connection-status";
 import { Smartphone, Laptop, RefreshCw, CheckCircle, AlertCircle, Loader2, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
+import { getTranslations, type Locale } from "@/lib/client-i18n";
 
 interface SyncPanelProps {
   readonly role: "sender" | "receiver";
@@ -19,7 +20,8 @@ interface SyncPanelProps {
 
 export function SyncPanel({ role, sessionId }: SyncPanelProps) {
   const params = useParams();
-  const lang = (params?.lang as string) || "en";
+  const lang = (params?.lang as Locale) || "en";
+  const t = useMemo(() => getTranslations(lang), [lang]);
   const { currentProfile } = useProfiles();
   const { settings } = useSettings();
   const {
@@ -74,7 +76,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
     console.log("[SYNC-PANEL] handleStartSync called, isVerified:", isVerified, "syncing:", syncing);
 
     if (!isVerified) {
-      toast.error("Please verify the connection first");
+      toast.error(t("sync.verifyFirst"));
       return;
     }
 
@@ -83,10 +85,10 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
       const result = await startSync();
       console.log("[SYNC-PANEL] startSync result:", result);
       if (!result.success) {
-        toast.error(result.error || "Sync failed");
+        toast.error(result.error || t("sync.failed"));
       }
     } catch (err) {
-      toast.error("Failed to start sync");
+      toast.error(t("sync.error"));
       console.error("[SYNC-PANEL] Sync error:", err);
     }
   };
@@ -150,12 +152,12 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
       {role === "receiver" && showQR && syncUrl && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Scan to Connect</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">{t("sync.scanToConnect")}</h3>
             <div className="flex justify-center">
               <QRCodeGenerator url={syncUrl} />
             </div>
             <p className="text-sm text-gray-600 mt-4">
-              Scan this QR code with the sender device to start syncing
+              {t("sync.scanInstruction")}
             </p>
           </div>
         </div>
@@ -166,7 +168,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <RefreshCcw className="w-5 h-5" />
-            P2P Sync
+            {t("sync.title")}
           </h3>
           <ConnectionStatus
             state={connectionState}
@@ -180,16 +182,16 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
             <>
               <Smartphone className="w-8 h-8 text-blue-500" />
               <div>
-                <p className="font-medium text-gray-900">This Device (Sender)</p>
-                <p className="text-sm text-gray-600">Initiates the sync connection</p>
+                <p className="font-medium text-gray-900">{t("sync.sender")}</p>
+                <p className="text-sm text-gray-600">{t("sync.senderDesc")}</p>
               </div>
             </>
           ) : (
             <>
               <Laptop className="w-8 h-8 text-green-500" />
               <div>
-                <p className="font-medium text-gray-900">This Device (Receiver)</p>
-                <p className="text-sm text-gray-600">Waits for sender to connect</p>
+                <p className="font-medium text-gray-900">{t("sync.receiver")}</p>
+                <p className="text-sm text-gray-600">{t("sync.receiverDesc")}</p>
               </div>
             </>
           )}
@@ -198,12 +200,12 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
         {/* Profile & Language Info */}
         {currentProfile && settings && (
           <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-sm font-medium text-blue-900 mb-1">Current Profile</p>
+            <p className="text-sm font-medium text-blue-900 mb-1">{t("sync.currentProfile")}</p>
             <p className="text-sm text-blue-700">
               {currentProfile.name} • {settings.sourceLanguage} → {settings.targetLanguage}
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              Both devices must have matching source and target languages to sync
+              {t("sync.languageMatchWarning")}
             </p>
           </div>
         )}
@@ -219,8 +221,8 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
             </div>
             {syncStatus.stats && (
               <div className="mt-2 text-sm grid grid-cols-2 gap-2">
-                <div>Added: {syncStatus.stats.remoteAdded}</div>
-                <div>Updated: {syncStatus.stats.localUpdated}</div>
+                <div>{t("sync.added")}: {syncStatus.stats.remoteAdded}</div>
+                <div>{t("sync.updated")}: {syncStatus.stats.localUpdated}</div>
               </div>
             )}
           </div>
@@ -239,7 +241,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {syncing ? "Syncing..." : "Start Sync"}
+              {syncing ? t("sync.syncing") : t("sync.startSync")}
             </button>
           )}
 
@@ -247,7 +249,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
             onClick={handleReset}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
-            Reset
+            {t("sync.reset")}
           </button>
         </div>
       </div>

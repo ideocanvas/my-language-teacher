@@ -9,7 +9,7 @@ const translations = {
   zh: zhTranslations,
 };
 
-export const getTranslations = (locale: Locale) => {
+export const getTranslations = (locale: Locale): (key: string, params?: Record<string, string | number>) => string => {
   const t = (key: string, params?: Record<string, string | number>) => {
     const keys = key.split('.');
     let value: unknown = translations[locale];
