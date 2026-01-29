@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import { useVocabulary } from "@/hooks/use-vocabulary";
-import { Brain, Shuffle, Book, Volume2, Keyboard, ArrowRight } from "lucide-react";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
+import { ArrowRight, Book, Brain, Keyboard, Shuffle, Volume2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 
 type QuizType = "flashcard" | "multiple-choice" | "fill-blank" | "typing" | "listening";
 
@@ -59,7 +59,7 @@ interface QuizHubClientProps {
   lang: Locale;
 }
 
-export function QuizHubClient({ lang }: QuizHubClientProps) {
+export function QuizHubClient({ lang }: Readonly<QuizHubClientProps>) {
   const router = useRouter();
   const { vocabulary, dailyReview, loading } = useVocabulary();
 

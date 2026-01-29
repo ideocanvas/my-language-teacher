@@ -18,7 +18,7 @@ interface MultipleChoiceQuizClientProps {
   lang: Locale;
 }
 
-export function MultipleChoiceQuizClient({ lang }: MultipleChoiceQuizClientProps) {
+export function MultipleChoiceQuizClient({ lang }: Readonly<MultipleChoiceQuizClientProps>) {
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {

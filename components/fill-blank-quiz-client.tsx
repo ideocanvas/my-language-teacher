@@ -12,7 +12,7 @@ interface FillBlankQuizClientProps {
   lang: Locale;
 }
 
-export function FillBlankQuizClient({ lang }: FillBlankQuizClientProps) {
+export function FillBlankQuizClient({ lang }: Readonly<FillBlankQuizClientProps>) {
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {

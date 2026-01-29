@@ -12,7 +12,7 @@ interface TypingQuizClientProps {
   lang: Locale;
 }
 
-export function TypingQuizClient({ lang }: TypingQuizClientProps) {
+export function TypingQuizClient({ lang }: Readonly<TypingQuizClientProps>) {
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {

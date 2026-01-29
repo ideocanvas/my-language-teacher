@@ -12,7 +12,7 @@ interface FlashcardQuizClientProps {
   lang: Locale;
 }
 
-export function FlashcardQuizClient({ lang }: FlashcardQuizClientProps) {
+export function FlashcardQuizClient({ lang }: Readonly<FlashcardQuizClientProps>) {
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {

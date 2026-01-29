@@ -12,7 +12,7 @@ interface ListeningQuizClientProps {
   lang: Locale;
 }
 
-export function ListeningQuizClient({ lang }: ListeningQuizClientProps) {
+export function ListeningQuizClient({ lang }: Readonly<ListeningQuizClientProps>) {
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {
