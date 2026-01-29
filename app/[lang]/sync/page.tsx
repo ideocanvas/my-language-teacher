@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SyncClient } from "@/components/sync-client";
 import type { Locale } from "@/lib/client-i18n";
 
@@ -11,5 +12,9 @@ export default async function SyncPage({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
-  return <SyncClient lang={lang as Locale} />;
+  return (
+    <Suspense fallback={null}>
+      <SyncClient lang={lang as Locale} />
+    </Suspense>
+  );
 }
