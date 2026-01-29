@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import { useVocabulary } from "@/hooks/use-vocabulary";
@@ -16,6 +16,8 @@ import {
   Camera,
   X,
   Loader2,
+  Crop,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
@@ -43,6 +45,15 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Crop selection state
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropArea, setCropArea] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const cropContainerRef = useRef<HTMLDivElement | null>(null);
+  const cropImageRef = useRef<HTMLImageElement | null>(null);
 
   const speakText = async (text: string, langCode: string) => {
     try {
@@ -203,7 +214,7 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
     setShowCamera(false);
   };
 
-  const captureImage = async () => {
+  const captureImage = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -235,10 +246,143 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
     // Convert to base64 with reduced quality for smaller payload
     const imageData = canvas.toDataURL("image/jpeg", 0.85);
 
-    // Stop camera
+    // Stop camera and show crop modal
     stopCamera();
+    setCapturedImage(imageData);
+    // Initialize crop area to full image
+    setCropArea({ x: 0, y: 0, width: 100, height: 100 });
+    setShowCropModal(true);
+  };
 
-    // Extract text from image
+  // Crop selection handlers
+  const handleCropMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cropContainerRef.current) return;
+    
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setIsDragging(true);
+    setDragStart({ x, y });
+    setCropArea({ x, y, width: 0, height: 0 });
+  }, []);
+
+  const handleCropMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging || !cropContainerRef.current) return;
+    
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const currentX = ((e.clientX - rect.left) / rect.width) * 100;
+    const currentY = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    const x = Math.min(dragStart.x, currentX);
+    const y = Math.min(dragStart.y, currentY);
+    const width = Math.abs(currentX - dragStart.x);
+    const height = Math.abs(currentY - dragStart.y);
+    
+    setCropArea({ x, y, width, height });
+  }, [isDragging, dragStart]);
+
+  const handleCropMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleCropTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!cropContainerRef.current) return;
+    
+    const touch = e.touches[0];
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const x = ((touch.clientX - rect.left) / rect.width) * 100;
+    const y = ((touch.clientY - rect.top) / rect.height) * 100;
+    
+    setIsDragging(true);
+    setDragStart({ x, y });
+    setCropArea({ x, y, width: 0, height: 0 });
+  }, []);
+
+  const handleCropTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging || !cropContainerRef.current) return;
+    
+    const touch = e.touches[0];
+    const rect = cropContainerRef.current.getBoundingClientRect();
+    const currentX = ((touch.clientX - rect.left) / rect.width) * 100;
+    const currentY = ((touch.clientY - rect.top) / rect.height) * 100;
+    
+    const x = Math.min(dragStart.x, currentX);
+    const y = Math.min(dragStart.y, currentY);
+    const width = Math.abs(currentX - dragStart.x);
+    const height = Math.abs(currentY - dragStart.y);
+    
+    setCropArea({ x, y, width, height });
+  }, [isDragging, dragStart]);
+
+  const handleCropTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const resetCrop = () => {
+    setCropArea({ x: 0, y: 0, width: 100, height: 100 });
+  };
+
+  const cancelCrop = () => {
+    setShowCropModal(false);
+    setCapturedImage(null);
+    setCropArea({ x: 0, y: 0, width: 0, height: 0 });
+  };
+
+  const confirmCropAndExtract = async () => {
+    if (!capturedImage || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Create a temporary image to get dimensions
+    const img = new Image();
+    
+    // Use a promise to wait for image load
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = capturedImage;
+    });
+
+    // Calculate crop coordinates in pixels
+    const cropX = Math.round((cropArea.x / 100) * img.width);
+    const cropY = Math.round((cropArea.y / 100) * img.height);
+    const cropWidth = Math.max(1, Math.round((cropArea.width / 100) * img.width));
+    const cropHeight = Math.max(1, Math.round((cropArea.height / 100) * img.height));
+
+    // If no area selected (too small), use full image
+    const finalCropX = cropWidth < 5 ? 0 : cropX;
+    const finalCropY = cropHeight < 5 ? 0 : cropY;
+    const finalCropWidth = cropWidth < 5 ? img.width : cropWidth;
+    const finalCropHeight = cropHeight < 5 ? img.height : cropHeight;
+
+    // Set canvas to crop size
+    canvas.width = finalCropWidth;
+    canvas.height = finalCropHeight;
+
+    // Draw cropped portion
+    ctx.drawImage(
+      img,
+      finalCropX,
+      finalCropY,
+      finalCropWidth,
+      finalCropHeight,
+      0,
+      0,
+      finalCropWidth,
+      finalCropHeight
+    );
+
+    // Convert to base64
+    const croppedImageData = canvas.toDataURL("image/jpeg", 0.9);
+
+    // Close crop modal
+    setShowCropModal(false);
+    setCapturedImage(null);
+
+    // Extract text from cropped image
     setExtractingText(true);
     try {
       const response = await fetch("/api/vision/extract", {
@@ -247,7 +391,7 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          image: imageData,
+          image: croppedImageData,
           language: settings?.sourceLanguage || "en",
         }),
       });
@@ -439,6 +583,161 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
                 <p className="text-center text-white/80 text-xs mt-2">
                   {t("translate.camera.tapToCapture")}
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Crop Selection Modal */}
+        {showCropModal && capturedImage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+            <div className="relative w-full max-w-2xl bg-gray-900 rounded-xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
+                <div className="flex items-center space-x-2">
+                  <Crop className="w-5 h-5 text-blue-400" />
+                  <span className="text-white font-medium text-sm">{t("translate.crop.title")}</span>
+                </div>
+                <button
+                  onClick={cancelCrop}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Crop Area */}
+              <div className="p-4">
+                <p className="text-gray-400 text-sm mb-3 text-center">
+                  {t("translate.crop.instruction")}
+                </p>
+                
+                <div
+                  ref={cropContainerRef}
+                  className="relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden cursor-crosshair select-none touch-none"
+                  onMouseDown={handleCropMouseDown}
+                  onMouseMove={handleCropMouseMove}
+                  onMouseUp={handleCropMouseUp}
+                  onMouseLeave={handleCropMouseUp}
+                  onTouchStart={handleCropTouchStart}
+                  onTouchMove={handleCropTouchMove}
+                  onTouchEnd={handleCropTouchEnd}
+                >
+                  {/* Image */}
+                  <img
+                    ref={cropImageRef}
+                    src={capturedImage}
+                    alt="Captured"
+                    className="w-full h-full object-contain"
+                    draggable={false}
+                  />
+                  
+                  {/* Dark overlay outside crop area */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Top */}
+                    <div
+                      className="absolute bg-black/50"
+                      style={{
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: `${cropArea.y}%`,
+                      }}
+                    />
+                    {/* Bottom */}
+                    <div
+                      className="absolute bg-black/50"
+                      style={{
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: `${100 - cropArea.y - cropArea.height}%`,
+                      }}
+                    />
+                    {/* Left */}
+                    <div
+                      className="absolute bg-black/50"
+                      style={{
+                        top: `${cropArea.y}%`,
+                        left: 0,
+                        width: `${cropArea.x}%`,
+                        height: `${cropArea.height}%`,
+                      }}
+                    />
+                    {/* Right */}
+                    <div
+                      className="absolute bg-black/50"
+                      style={{
+                        top: `${cropArea.y}%`,
+                        right: 0,
+                        width: `${100 - cropArea.x - cropArea.width}%`,
+                        height: `${cropArea.height}%`,
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Crop selection border */}
+                  {cropArea.width > 0 && cropArea.height > 0 && (
+                    <div
+                      className="absolute border-2 border-blue-500 pointer-events-none"
+                      style={{
+                        left: `${cropArea.x}%`,
+                        top: `${cropArea.y}%`,
+                        width: `${cropArea.width}%`,
+                        height: `${cropArea.height}%`,
+                      }}
+                    >
+                      {/* Corner handles */}
+                      <div className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 rounded-full" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full" />
+                      <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 rounded-full" />
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 rounded-full" />
+                      
+                      {/* Grid lines */}
+                      <div className="absolute top-1/3 left-0 right-0 h-px bg-blue-500/50" />
+                      <div className="absolute top-2/3 left-0 right-0 h-px bg-blue-500/50" />
+                      <div className="absolute left-1/3 top-0 bottom-0 w-px bg-blue-500/50" />
+                      <div className="absolute left-2/3 top-0 bottom-0 w-px bg-blue-500/50" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-t border-gray-700">
+                <button
+                  onClick={resetCrop}
+                  className="flex items-center space-x-2 px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span className="text-sm">{t("translate.crop.reset")}</span>
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={cancelCrop}
+                    className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors text-sm"
+                  >
+                    {t("translate.crop.cancel")}
+                  </button>
+                  <button
+                    onClick={confirmCropAndExtract}
+                    disabled={extractingText}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    {extractingText ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="text-sm">{t("translate.crop.extracting")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span className="text-sm">{t("translate.crop.confirm")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

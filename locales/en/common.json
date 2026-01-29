@@ -72,6 +72,14 @@
       "extractSuccess": "Text extracted from image!",
       "extractFail": "Failed to extract text from image"
     },
+    "crop": {
+      "title": "Select Text Area",
+      "instruction": "Drag to select the area containing text you want to translate",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "confirm": "Extract Text",
+      "extracting": "Extracting..."
+    },
     "placeholder": {
       "enter": "Enter text to translate...",
       "translation": "Translation will appear here..."

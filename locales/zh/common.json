@@ -72,6 +72,14 @@
       "extractSuccess": "从图像中提取文本成功！",
       "extractFail": "从图像中提取文本失败"
     },
+    "crop": {
+      "title": "选择文本区域",
+      "instruction": "拖动选择包含要翻译文本的区域",
+      "reset": "重置",
+      "cancel": "取消",
+      "confirm": "提取文本",
+      "extracting": "提取中..."
+    },
     "placeholder": {
       "enter": "输入文本以翻译...",
       "translation": "翻译将出现在这里..."
