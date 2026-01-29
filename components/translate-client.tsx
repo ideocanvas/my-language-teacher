@@ -330,61 +330,67 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
   };
 
   const confirmCropAndExtract = async () => {
-    if (!capturedImage || !canvasRef.current) return;
+    if (!capturedImage || !canvasRef.current) {
+      toast.error("Missing image data");
+      return;
+    }
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Create a temporary image to get dimensions
-    const img = new Image();
-    
-    // Use a promise to wait for image load
-    await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Failed to load image"));
-      img.src = capturedImage;
-    });
-
-    // Calculate crop coordinates in pixels
-    const cropX = Math.round((cropArea.x / 100) * img.width);
-    const cropY = Math.round((cropArea.y / 100) * img.height);
-    const cropWidth = Math.max(1, Math.round((cropArea.width / 100) * img.width));
-    const cropHeight = Math.max(1, Math.round((cropArea.height / 100) * img.height));
-
-    // If no area selected (too small), use full image
-    const finalCropX = cropWidth < 5 ? 0 : cropX;
-    const finalCropY = cropHeight < 5 ? 0 : cropY;
-    const finalCropWidth = cropWidth < 5 ? img.width : cropWidth;
-    const finalCropHeight = cropHeight < 5 ? img.height : cropHeight;
-
-    // Set canvas to crop size
-    canvas.width = finalCropWidth;
-    canvas.height = finalCropHeight;
-
-    // Draw cropped portion
-    ctx.drawImage(
-      img,
-      finalCropX,
-      finalCropY,
-      finalCropWidth,
-      finalCropHeight,
-      0,
-      0,
-      finalCropWidth,
-      finalCropHeight
-    );
-
-    // Convert to base64
-    const croppedImageData = canvas.toDataURL("image/jpeg", 0.9);
-
-    // Close crop modal
-    setShowCropModal(false);
-    setCapturedImage(null);
-
-    // Extract text from cropped image
     setExtractingText(true);
+    
     try {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Failed to get canvas context");
+      }
+
+      // Create a temporary image to get dimensions
+      const img = new Image();
+      
+      // Use a promise to wait for image load
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = capturedImage;
+      });
+
+      // Calculate crop coordinates in pixels
+      const cropX = Math.round((cropArea.x / 100) * img.width);
+      const cropY = Math.round((cropArea.y / 100) * img.height);
+      const cropWidth = Math.max(1, Math.round((cropArea.width / 100) * img.width));
+      const cropHeight = Math.max(1, Math.round((cropArea.height / 100) * img.height));
+
+      // If no area selected (too small), use full image
+      const finalCropX = cropWidth < 5 ? 0 : cropX;
+      const finalCropY = cropHeight < 5 ? 0 : cropY;
+      const finalCropWidth = cropWidth < 5 ? img.width : cropWidth;
+      const finalCropHeight = cropHeight < 5 ? img.height : cropHeight;
+
+      // Set canvas to crop size
+      canvas.width = finalCropWidth;
+      canvas.height = finalCropHeight;
+
+      // Draw cropped portion
+      ctx.drawImage(
+        img,
+        finalCropX,
+        finalCropY,
+        finalCropWidth,
+        finalCropHeight,
+        0,
+        0,
+        finalCropWidth,
+        finalCropHeight
+      );
+
+      // Convert to base64
+      const croppedImageData = canvas.toDataURL("image/jpeg", 0.9);
+
+      // Close crop modal
+      setShowCropModal(false);
+      setCapturedImage(null);
+
+      // Extract text from cropped image
       const response = await fetch("/api/vision/extract", {
         method: "POST",
         headers: {
@@ -402,6 +408,7 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
       }
 
       const data = await response.json();
+      
       if (data.text?.trim()) {
         setSourceText(data.text.trim());
         toast.success(t("translate.camera.extractSuccess"));
@@ -561,9 +568,6 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
                   </div>
                 </div>
               )}
-
-              {/* Hidden canvas for capturing */}
-              <canvas ref={canvasRef} className="hidden" />
 
               {/* Capture Button */}
               <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
@@ -742,6 +746,9 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
             </div>
           </div>
         )}
+
+        {/* Hidden canvas for image processing - always available */}
+        <canvas ref={canvasRef} className="hidden" />
 
         {/* Word Suggestions from Sentence Translation */}
         {wordSuggestions.length > 0 && (
