@@ -23,10 +23,23 @@ export interface FileTransfer {
   error?: string;
 }
 
+interface FileBuffer {
+  chunks: (Uint8Array | undefined)[];
+  metadata: {
+    name: string;
+    size: number;
+    type: string;
+    totalChunks: number;
+  };
+}
+
+import type { SyncMessage } from "@/lib/vocabulary-types";
+
 interface PeerManagerCallbacks {
   onConnectionStateChange: (state: ConnectionState) => void;
   onFileReceived?: (file: Blob, metadata: { name: string; type: string }) => void;
   onTextReceived?: (text: string, contentType?: string) => void;
+  onSyncMessage?: (message: SyncMessage) => void;
   onLog?: (log: LogEntry) => void;
 }
 
@@ -35,7 +48,7 @@ const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 
 class PeerManager {
   private static instance: PeerManager;
-  private peer: Peer;
+  private readonly peer: Peer;
   private connection: DataConnection | null = null;
   private sessionId: string = '';
   private role: 'sender' | 'receiver' = 'sender';
@@ -51,19 +64,8 @@ class PeerManager {
 
   // Refs for cleanup
   private timeoutRef: NodeJS.Timeout | null = null;
-  private verificationTimeoutRef: NodeJS.Timeout | null = null;
-  private fileBuffers = new Map<
-    string,
-    {
-      chunks: Uint8Array[];
-      metadata: {
-        name: string;
-        size: number;
-        type: string;
-        totalChunks: number;
-      };
-    }
-  >();
+  private readonly verificationTimeoutRef: NodeJS.Timeout | null = null;
+  private readonly fileBuffers = new Map<string, FileBuffer>();
 
   static getInstance(): PeerManager {
     if (!PeerManager.instance) {
@@ -230,328 +232,239 @@ class PeerManager {
     if (typeof data === "object" && data !== null) {
       const dataObj = data as Record<string, unknown>;
       if (dataObj.type) {
-        this.log("info", `Processing data type: ${dataObj.type}`);
+        this.log("info", `Processing data type: ${typeof dataObj.type === 'string' ? dataObj.type : JSON.stringify(dataObj.type)}`);
+        // Debug: log vocabulary entries count if present
+        if (dataObj.vocabularyEntries && Array.isArray(dataObj.vocabularyEntries)) {
+          this.log("info", `Received ${dataObj.vocabularyEntries.length} vocabulary entries`);
+        }
       }
     }
 
     if (typeof data !== "object" || data === null) return;
 
     const dataObj = data as Record<string, unknown>;
+    const dataType = dataObj.type as string;
 
-    if (dataObj.type === "verification-request") {
-      // Only receiver should process verification request and show the code
-      if (this.role === "receiver") {
-        this.verificationCode = dataObj.verificationCode as string;
-        this.log(
-          "info",
-          "Verification code received",
-          `Waiting for user to confirm`
-        );
-      } else {
-        // Sender should not set verification code when receiving request (this should not happen)
-        this.verificationCode = null;
-      }
-    } else if (dataObj.type === "verification-response") {
-      // Sender receives verification response from receiver
-      if (this.role === "sender") {
-        const enteredCode = dataObj.verificationCode as string;
-        this.log(
-          "info",
-          "Received verification response",
-          `Entered code: ${enteredCode}, Expected: ${this.verificationCode}`
-        );
-        if (enteredCode === this.verificationCode) {
-          this.isVerified = true;
-          this.setConnectionState("connected");
-          this.log("success", "Receiver verified the connection");
+    switch (dataType) {
+      case "verification-request":
+        this.handleVerificationRequest(dataObj);
+        break;
+      case "verification-response":
+        this.handleVerificationResponse(dataObj);
+        break;
+      case "verification-success":
+        this.handleVerificationSuccess();
+        break;
+      case "verification-failed":
+        this.handleVerificationFailed();
+        break;
+      case "file-metadata":
+        this.handleFileMetadata(dataObj);
+        break;
+      case "file-chunk":
+        this.handleFileChunk(dataObj);
+        break;
+      case "text-content":
+        this.handleTextContent(dataObj);
+        break;
+      case "sync-request":
+      case "sync-response":
+      case "sync-complete":
+      case "sync-error":
+        this.handleSyncMessage(dataObj, dataType);
+        break;
+    }
+  }
 
-          // Send success confirmation
-          const message = { type: "verification-success" };
-          if (this.connection && this.connection.open) {
-            try {
-              this.connection.send(message);
-              this.log("success", "Sent verification success to receiver");
-            } catch (err) {
-              this.log("error", "Failed to send verification success", String(err));
-            }
-          }
-        } else {
-          this.log(
-            "error",
-            "Receiver entered incorrect code",
-            `Expected: ${this.verificationCode}, Got: ${enteredCode}`
-          );
-          this.error = "Receiver verification failed - incorrect code";
+  private handleVerificationRequest(dataObj: Record<string, unknown>): void {
+    if (this.role === "receiver") {
+      this.verificationCode = dataObj.verificationCode as string;
+      this.log("info", "Verification code received", "Waiting for user to confirm");
+    } else {
+      this.verificationCode = null;
+    }
+  }
 
-          // Send verification failure message
-          const message = { type: "verification-failed" };
-          if (this.connection && this.connection.open) {
-            this.connection.send(message);
-            this.log("info", "Sent verification failure to receiver");
-          }
+  private handleVerificationResponse(dataObj: Record<string, unknown>): void {
+    if (this.role !== "sender") return;
+
+    const enteredCode = dataObj.verificationCode as string;
+    this.log("info", "Received verification response", `Entered code: ${enteredCode}, Expected: ${this.verificationCode}`);
+
+    if (enteredCode === this.verificationCode) {
+      this.isVerified = true;
+      this.setConnectionState("connected");
+      this.log("success", "Receiver verified the connection");
+
+      const message = { type: "verification-success" };
+      if (this.connection?.open) {
+        try {
+          this.connection.send(message);
+          this.log("success", "Sent verification success to receiver");
+        } catch (err) {
+          this.log("error", "Failed to send verification success", String(err));
         }
       }
-    } else if (dataObj.type === "verification-success") {
-      // Receiver gets confirmation from sender
-      if (this.role === "receiver") {
-        this.isVerified = true;
-        this.setConnectionState("connected");
-        this.log("success", "Verification successful");
-        // Clear any pending verification timeout
-        if (this.verificationTimeoutRef) clearTimeout(this.verificationTimeoutRef);
+    } else {
+      this.log("error", "Receiver entered incorrect code", `Expected: ${this.verificationCode}, Got: ${enteredCode}`);
+      this.error = "Receiver verification failed - incorrect code";
+
+      const message = { type: "verification-failed" };
+      if (this.connection?.open) {
+        this.connection.send(message);
+        this.log("info", "Sent verification failure to receiver");
       }
-    } else if (dataObj.type === "verification-failed") {
-      // Receiver gets failure notification from sender
-      if (this.role === "receiver") {
-        this.log("error", "Verification failed - incorrect code entered");
-        this.error = "Verification failed - please check the code and try again";
-        this.setConnectionState("verifying"); // Stay in verifying state to allow retry
-      }
-    } else if (dataObj.type === "file-metadata") {
-      // Both devices can process file metadata for bidirectional clipboard
-      if (!this.isVerified) {
-        this.log("error", "File transfer attempted before verification");
+    }
+  }
+
+  private handleVerificationSuccess(): void {
+    if (this.role !== "receiver") return;
+
+    this.isVerified = true;
+    this.setConnectionState("connected");
+    this.log("success", "Verification successful");
+    if (this.verificationTimeoutRef) clearTimeout(this.verificationTimeoutRef);
+  }
+
+  private handleVerificationFailed(): void {
+    if (this.role !== "receiver") return;
+
+    this.log("error", "Verification failed - incorrect code entered");
+    this.error = "Verification failed - please check the code and try again";
+    this.setConnectionState("verifying");
+  }
+
+  private handleFileMetadata(dataObj: Record<string, unknown>): void {
+    if (!this.isVerified) {
+      this.log("error", "File transfer attempted before verification");
+      return;
+    }
+
+    const { id, name, size, fileType, totalChunks } = dataObj as {
+      id: string;
+      name: string;
+      size: number;
+      fileType: string;
+      totalChunks: number;
+    };
+
+    this.fileBuffers.set(id, {
+      chunks: new Array(totalChunks),
+      metadata: { name, size, type: fileType, totalChunks },
+    });
+
+    this.files = [
+      ...this.files,
+      { id, name, size, type: fileType, progress: 0, status: "transferring" },
+    ];
+
+    this.setConnectionState("transferring");
+    this.log("info", `Receiving: ${name}`, `${(size / 1024 / 1024).toFixed(2)} MB, ${totalChunks} chunks`);
+  }
+
+  private handleFileChunk(dataObj: Record<string, unknown>): void {
+    const { fileId, chunkIndex, chunk } = dataObj as {
+      fileId: string;
+      chunkIndex: number;
+      chunk: number[];
+    };
+    const fileBuffer = this.fileBuffers.get(fileId);
+
+    if (!fileBuffer) return;
+
+    fileBuffer.chunks[chunkIndex] = new Uint8Array(chunk);
+
+    const receivedChunks = fileBuffer.chunks.filter((c) => c !== undefined).length;
+    const progress = (receivedChunks / fileBuffer.metadata.totalChunks) * 100;
+
+    if (receivedChunks % 10 === 0 || receivedChunks === fileBuffer.metadata.totalChunks) {
+      this.log("info", `File chunk progress: ${fileBuffer.metadata.name}`,
+        `${receivedChunks}/${fileBuffer.metadata.totalChunks} chunks (${progress.toFixed(1)}%)`);
+    }
+
+    this.files = this.files.map((f) =>
+      f.id === fileId
+        ? { ...f, progress, status: progress === 100 ? "completed" : "transferring" }
+        : f
+    );
+
+    if (receivedChunks === fileBuffer.metadata.totalChunks) {
+      this.completeFileTransfer(fileBuffer, fileId);
+    }
+  }
+
+  private completeFileTransfer(fileBuffer: FileBuffer, fileId: string): void {
+    const orderedChunks: BlobPart[] = [];
+    for (let i = 0; i < fileBuffer.metadata.totalChunks; i++) {
+      const chunk = fileBuffer.chunks[i];
+      if (chunk === undefined) {
+        this.log("error", `Missing chunk ${i} for file ${fileBuffer.metadata.name}`);
         return;
       }
+      orderedChunks.push(chunk.buffer as ArrayBuffer);
+    }
 
-      const { id, name, size, fileType, totalChunks } = dataObj as {
-        id: string;
-        name: string;
-        size: number;
-        fileType: string;
-        totalChunks: number;
-      };
+    const completeFile = new Blob(orderedChunks, { type: fileBuffer.metadata.type });
 
-      this.fileBuffers.set(id, {
-        chunks: new Array(totalChunks),
-        metadata: { name, size, type: fileType, totalChunks },
-      });
+    if (completeFile.size !== fileBuffer.metadata.size) {
+      this.log("error", `File size mismatch: expected ${fileBuffer.metadata.size}, got ${completeFile.size}`);
+      return;
+    }
 
-      // Update files state through callbacks
-      this.files = [
-        ...this.files,
-        { id, name, size, type: fileType, progress: 0, status: "transferring" },
-      ];
+    this.callbacks.forEach(cb => cb.onFileReceived?.(completeFile, {
+      name: fileBuffer.metadata.name,
+      type: fileBuffer.metadata.type,
+    }));
+    this.log("success", `Received: ${fileBuffer.metadata.name} (${completeFile.size} bytes)`);
 
-      this.setConnectionState("transferring");
-      this.log(
-        "info",
-        `Receiving: ${name}`,
-        `${(size / 1024 / 1024).toFixed(2)} MB, ${totalChunks} chunks`
-      );
-    } else if (dataObj.type === "file-chunk") {
-      // Both devices can process file chunks for bidirectional clipboard
-      const { fileId, chunkIndex, chunk } = dataObj as {
-        fileId: string;
-        chunkIndex: number;
-        chunk: number[];
-      };
-      const fileBuffer = this.fileBuffers.get(fileId);
+    this.fileBuffers.delete(fileId);
 
-      if (fileBuffer) {
-        fileBuffer.chunks[chunkIndex] = new Uint8Array(chunk);
+    const allComplete = this.files.every((f) => f.status === "completed");
+    if (allComplete) {
+      this.setConnectionState("connected");
+    }
+  }
 
-        const receivedChunks = fileBuffer.chunks.filter(
-          (c) => c !== undefined
-        ).length;
-        const progress =
-          (receivedChunks / fileBuffer.metadata.totalChunks) * 100;
+  private handleTextContent(dataObj: Record<string, unknown>): void {
+    const { content, contentType } = dataObj as { content: string; contentType?: string };
 
-        // Log chunk progress for debugging
-        if (receivedChunks % 10 === 0 || receivedChunks === fileBuffer.metadata.totalChunks) {
-          this.log("info", `File chunk progress: ${fileBuffer.metadata.name}`,
-            `${receivedChunks}/${fileBuffer.metadata.totalChunks} chunks (${progress.toFixed(1)}%)`);
-        }
+    if (content && this.isVerified) {
+      this.callbacks.forEach(cb => cb.onTextReceived?.(content, contentType));
+      this.log("success", "Text content received", `${content.length} characters, type: ${contentType || 'text'}`);
+    } else if (!this.isVerified) {
+      this.log("error", "Text content received before verification");
+    }
+  }
 
-        // Update file progress
-        this.files = this.files.map((f) =>
-          f.id === fileId
-            ? {
-                ...f,
-                progress,
-                status: progress === 100 ? "completed" : "transferring",
-              }
-            : f
-        );
-
-        if (receivedChunks === fileBuffer.metadata.totalChunks) {
-          // Check for missing chunks and ensure correct order
-          const orderedChunks: Uint8Array[] = [];
-          for (let i = 0; i < fileBuffer.metadata.totalChunks; i++) {
-            const chunk = fileBuffer.chunks[i];
-            if (chunk === undefined) {
-              this.log("error", `Missing chunk ${i} for file ${fileBuffer.metadata.name}`);
-              return;
-            }
-            orderedChunks.push(chunk);
-          }
-
-          const completeFile = new Blob(orderedChunks, {
-            type: fileBuffer.metadata.type,
-          });
-
-          // Verify file size
-          if (completeFile.size !== fileBuffer.metadata.size) {
-            this.log("error", `File size mismatch: expected ${fileBuffer.metadata.size}, got ${completeFile.size}`);
-            return;
-          }
-
-          this.callbacks.forEach(cb => cb.onFileReceived?.(completeFile, {
-            name: fileBuffer.metadata.name,
-            type: fileBuffer.metadata.type,
-          }));
-          this.log("success", `Received: ${fileBuffer.metadata.name} (${completeFile.size} bytes)`);
-
-          // Clean up file buffer after successful transfer
-          this.fileBuffers.delete(fileId);
-
-          // Check if all files are complete
-          const allComplete = this.files.every((f) => f.status === "completed");
-          if (allComplete) {
-            this.setConnectionState("connected");
-          }
-        }
-      }
-    } else if (dataObj.type === "text-content") {
-      // Handle incoming text content
-      const { content, contentType } = dataObj as {
-        content: string;
-        contentType?: string;
-      };
-
-      if (content && this.isVerified) {
-        this.callbacks.forEach(cb => cb.onTextReceived?.(content, contentType));
-        this.log("success", "Text content received", `${content.length} characters, type: ${contentType || 'text'}`);
-      } else if (!this.isVerified) {
-        this.log("error", "Text content received before verification");
-      }
+  private handleSyncMessage(dataObj: Record<string, unknown>, dataType: string): void {
+    if (this.isVerified) {
+      this.callbacks.forEach(cb => cb.onSyncMessage?.(dataObj as unknown as SyncMessage));
+      this.log("info", `Sync message received: ${dataType}`);
+    } else {
+      this.log("error", "Sync message received before verification");
     }
   }
 
   async connect(role: 'sender' | 'receiver', sessionId?: string): Promise<string> {
     this.role = role;
-    this.cleanup(); // Clean up any existing connections
+    this.cleanup();
 
     return new Promise((resolve, reject) => {
       try {
         this.setConnectionState("connecting");
         this.log("info", "Starting PeerJS connection");
 
-        // Use the global peer instance
         const peer = this.peer;
+        const connectionTimeoutRef = this.setupConnectionTimeout(reject);
 
-        // Set connection timeout
-        const connectionTimeoutRef = setTimeout(() => {
-          this.log("warning", "PeerJS connection timed out after 15s");
-          this.error = "Connection timeout";
-          this.setConnectionState("disconnected");
-          reject(new Error("Connection timeout"));
-        }, 15000);
-
-        // Check if peer is already open
         if (this.peerId) {
-          this.log("success", `PeerJS peer already open: ${this.peerId}`);
-          this.resetTimeout();
-          this.sessionId = this.peerId; // Use peer ID as session ID
-
-          // If sender, connect to receiver using the sessionId (which is receiver's peer ID)
-          if (role === "sender" && sessionId) {
-            setTimeout(() => {
-              this.log("info", "Attempting to connect to receiver...");
-              const conn = peer.connect(sessionId, {
-                reliable: true,
-                serialization: "binary",
-              });
-
-              const connectTimeout = setTimeout(() => {
-                this.log("warning", "Connection attempt timed out");
-                conn.close();
-                this.error = "Connection timeout";
-                this.setConnectionState("disconnected");
-                reject(new Error("Connection timeout"));
-              }, 8000);
-
-              conn.on("open", () => {
-                this.log("success", "Data connection established");
-                clearTimeout(connectTimeout);
-                this.setupPeerJSConnection(conn);
-                resolve(this.peerId!);
-              });
-
-              conn.on("error", (err) => {
-                this.log("error", "Connection error", String(err));
-                clearTimeout(connectTimeout);
-                this.error = "Connection failed";
-                this.setConnectionState("disconnected");
-                reject(err);
-              });
-            }, 1000);
-          } else {
-            // Receiver is ready and waiting for connection
-            this.log("info", "Receiver ready, waiting for sender connection");
-            resolve(this.peerId!);
-          }
+          this.handleExistingPeer(role, sessionId, peer, connectionTimeoutRef, resolve, reject);
         } else {
-          // Wait for peer to open
-          const openHandler = (id: string) => {
-            this.log("success", `PeerJS peer open: ${id}`);
-            this.peerId = id;
-            this.sessionId = id; // Use peer ID as session ID
-            clearTimeout(connectionTimeoutRef);
-            this.resetTimeout();
-
-            // If sender, connect to receiver using the sessionId (which is receiver's peer ID)
-            if (role === "sender" && sessionId) {
-              setTimeout(() => {
-                this.log("info", "Attempting to connect to receiver...");
-                const conn = peer.connect(sessionId, {
-                  reliable: true,
-                  serialization: "binary",
-                });
-
-                const connectTimeout = setTimeout(() => {
-                  this.log("warning", "Connection attempt timed out");
-                  conn.close();
-                  this.error = "Connection timeout";
-                  this.setConnectionState("disconnected");
-                  reject(new Error("Connection timeout"));
-                }, 8000);
-
-                conn.on("open", () => {
-                  this.log("success", "Data connection established");
-                  clearTimeout(connectTimeout);
-                  this.setupPeerJSConnection(conn);
-                  resolve(id);
-                });
-
-                conn.on("error", (err) => {
-                  this.log("error", "Connection error", String(err));
-                  clearTimeout(connectTimeout);
-                  this.error = "Connection failed";
-                  this.setConnectionState("disconnected");
-                  reject(err);
-                });
-              }, 1000);
-            } else {
-              // Receiver is ready and waiting for connection
-              this.log("info", "Receiver ready, waiting for sender connection");
-              resolve(id);
-            }
-          };
-
-          peer.once("open", openHandler);
+          this.waitForPeerOpen(role, sessionId, peer, connectionTimeoutRef, resolve, reject);
         }
 
-        // Set up receiver connection handler
         if (role === "receiver") {
-          const connectionHandler = (conn: DataConnection) => {
-            this.log("success", "Sender connected via PeerJS");
-            clearTimeout(connectionTimeoutRef);
-            this.setupPeerJSConnection(conn);
-            resolve(this.peerId!);
-          };
-
-          peer.on("connection", connectionHandler);
+          this.setupReceiverHandler(peer, connectionTimeoutRef, resolve);
         }
       } catch (err) {
         this.log("error", "PeerJS failed", String(err));
@@ -562,134 +475,259 @@ class PeerManager {
     });
   }
 
-  async sendFiles(filesToSend: File[]): Promise<void> {
-    if (this.connectionState !== "connected") {
-      this.error = "No active connection. Please verify the connection first.";
-      return;
-    }
+  private setupConnectionTimeout(reject: (reason?: unknown) => void): ReturnType<typeof setTimeout> {
+    return setTimeout(() => {
+      this.log("warning", "PeerJS connection timed out after 15s");
+      this.error = "Connection timeout";
+      this.setConnectionState("disconnected");
+      reject(new Error("Connection timeout"));
+    }, 15000);
+  }
 
-    if (!this.isVerified) {
-      this.error = "Connection not verified yet";
-      return;
+  private handleExistingPeer(
+    role: 'sender' | 'receiver',
+    sessionId: string | undefined,
+    peer: Peer,
+    connectionTimeoutRef: ReturnType<typeof setTimeout>,
+    resolve: (value: string) => void,
+    reject: (reason?: unknown) => void
+  ): void {
+    this.log("success", `PeerJS peer already open: ${this.peerId}`);
+    this.resetTimeout();
+    this.sessionId = this.peerId!;
+
+    if (role === "sender" && sessionId) {
+      this.connectToReceiver(peer, sessionId, connectionTimeoutRef, resolve, reject);
+    } else {
+      this.log("info", "Receiver ready, waiting for sender connection");
+      resolve(this.peerId!);
     }
+  }
+
+  private waitForPeerOpen(
+    role: 'sender' | 'receiver',
+    sessionId: string | undefined,
+    peer: Peer,
+    connectionTimeoutRef: ReturnType<typeof setTimeout>,
+    resolve: (value: string) => void,
+    reject: (reason?: unknown) => void
+  ): void {
+    const openHandler = (id: string) => {
+      this.log("success", `PeerJS peer open: ${id}`);
+      this.peerId = id;
+      this.sessionId = id;
+      clearTimeout(connectionTimeoutRef);
+      this.resetTimeout();
+
+      if (role === "sender" && sessionId) {
+        this.connectToReceiver(peer, sessionId, connectionTimeoutRef, resolve, reject);
+      } else {
+        this.log("info", "Receiver ready, waiting for sender connection");
+        resolve(id);
+      }
+    };
+
+    peer.once("open", openHandler);
+  }
+
+  private connectToReceiver(
+    peer: Peer,
+    sessionId: string,
+    connectionTimeoutRef: ReturnType<typeof setTimeout>,
+    resolve: (value: string) => void,
+    reject: (reason?: unknown) => void
+  ): void {
+    setTimeout(() => {
+      this.log("info", "Attempting to connect to receiver...");
+      const conn = peer.connect(sessionId, {
+        reliable: true,
+        serialization: "binary",
+      });
+
+      const connectTimeout = setTimeout(() => {
+        this.log("warning", "Connection attempt timed out");
+        conn.close();
+        this.error = "Connection timeout";
+        this.setConnectionState("disconnected");
+        reject(new Error("Connection timeout"));
+      }, 8000);
+
+      conn.on("open", () => {
+        this.log("success", "Data connection established");
+        clearTimeout(connectTimeout);
+        this.setupPeerJSConnection(conn);
+        resolve(this.peerId!);
+      });
+
+      conn.on("error", (err) => {
+        this.log("error", "Connection error", String(err));
+        clearTimeout(connectTimeout);
+        this.error = "Connection failed";
+        this.setConnectionState("disconnected");
+        reject(err);
+      });
+    }, 1000);
+  }
+
+  private setupReceiverHandler(
+    peer: Peer,
+    connectionTimeoutRef: ReturnType<typeof setTimeout>,
+    resolve: (value: string) => void
+  ): void {
+    const connectionHandler = (conn: DataConnection) => {
+      this.log("success", "Sender connected via PeerJS");
+      clearTimeout(connectionTimeoutRef);
+      this.setupPeerJSConnection(conn);
+      resolve(this.peerId!);
+    };
+
+    peer.on("connection", connectionHandler);
+  }
+
+  async sendFiles(filesToSend: File[]): Promise<void> {
+    if (!this.canSend()) return;
 
     try {
       this.setConnectionState("transferring");
       this.log("info", `Sending ${filesToSend.length} file(s)`);
 
       for (let fileIndex = 0; fileIndex < filesToSend.length; fileIndex++) {
-        const file = filesToSend[fileIndex];
-        const fileId = `${Date.now()}-${Math.random()}`;
-        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-        try {
-          // Add file to tracking
-          this.files = [
-            ...this.files,
-            {
-              id: fileId,
-              name: file.name,
-              size: file.size,
-              type: file.type,
-              progress: 0,
-              status: "transferring",
-            },
-          ];
-
-          this.log(
-            "info",
-            `Sending: ${file.name} (${fileIndex + 1}/${filesToSend.length})`,
-            `${(file.size / 1024 / 1024).toFixed(2)} MB`
-          );
-
-          const metadata = {
-            type: "file-metadata",
-            id: fileId,
-            name: file.name,
-            size: file.size,
-            fileType: file.type,
-            totalChunks,
-          };
-
-          // Send metadata as binary data
-          const jsonString = JSON.stringify(metadata);
-          const binaryData = new TextEncoder().encode(jsonString);
-          if (this.connection) {
-            this.connection.send(binaryData);
-          }
-
-          const arrayBuffer = await file.arrayBuffer();
-          for (let i = 0; i < totalChunks; i++) {
-            // Add small delay between chunks to prevent overwhelming the connection
-            if (i > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1));
-            }
-
-            const chunk = arrayBuffer.slice(
-              i * CHUNK_SIZE,
-              (i + 1) * CHUNK_SIZE
-            );
-
-            // For PeerJS with binary serialization, send chunk data as binary
-            const chunkData = {
-              type: "file-chunk",
-              fileId,
-              chunkIndex: i,
-              chunk: Array.from(new Uint8Array(chunk)),
-            };
-
-            // Send as binary data to avoid JSON size limits
-            const chunkJsonString = JSON.stringify(chunkData);
-            const chunkBinaryData = new TextEncoder().encode(chunkJsonString);
-            if (this.connection) {
-              this.connection.send(chunkBinaryData);
-            }
-
-            const progress = ((i + 1) / totalChunks) * 100;
-
-            // Update file progress
-            this.files = this.files.map((f) =>
-              f.id === fileId
-                ? {
-                    ...f,
-                    progress,
-                    status: progress === 100 ? "completed" : "transferring",
-                  }
-                : f
-            );
-
-            this.resetTimeout();
-          }
-
-          this.log("success", `✓ Sent: ${file.name}`);
-
-          // Small delay between files
-          if (fileIndex < filesToSend.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-        } catch (fileErr) {
-          this.log("error", `Failed to send: ${file.name}`, String(fileErr));
-
-          // Update file status to error
-          this.files = this.files.map((f) =>
-            f.id === fileId
-              ? { ...f, status: "error", error: String(fileErr) }
-              : f
-          );
-          // Continue with next file instead of stopping
-        }
+        await this.sendSingleFile(filesToSend[fileIndex], fileIndex, filesToSend.length);
       }
 
       this.setConnectionState("connected");
     } catch (err) {
-      this.log("error", "Transfer failed", String(err));
-      this.error = "Failed to send files";
-
-      // Mark all transferring files as error
-      this.files = this.files.map((f) =>
-        f.status === "transferring" ? { ...f, status: "error" } : f
-      );
+      this.handleSendError(err);
     }
+  }
+
+  private canSend(): boolean {
+    if (this.connectionState !== "connected") {
+      this.error = "No active connection. Please verify the connection first.";
+      return false;
+    }
+
+    if (!this.isVerified) {
+      this.error = "Connection not verified yet";
+      return false;
+    }
+
+    return true;
+  }
+
+  private async sendSingleFile(file: File, fileIndex: number, totalFiles: number): Promise<void> {
+    const fileId = `${Date.now()}-${Math.random()}`;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    try {
+      this.addFileToTracking(fileId, file);
+      this.logFileStart(file, fileIndex, totalFiles);
+
+      await this.sendFileMetadata(fileId, file, totalChunks);
+      await this.sendFileChunks(fileId, file, totalChunks);
+
+      this.log("success", `✓ Sent: ${file.name}`);
+
+      if (fileIndex < totalFiles - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    } catch (error_) {
+      this.handleFileSendError(fileId, file.name, error_);
+    }
+  }
+
+  private addFileToTracking(fileId: string, file: File): void {
+    this.files = [
+      ...this.files,
+      {
+        id: fileId,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        progress: 0,
+        status: "transferring",
+      },
+    ];
+  }
+
+  private logFileStart(file: File, fileIndex: number, totalFiles: number): void {
+    this.log(
+      "info",
+      `Sending: ${file.name} (${fileIndex + 1}/${totalFiles})`,
+      `${(file.size / 1024 / 1024).toFixed(2)} MB`
+    );
+  }
+
+  private async sendFileMetadata(fileId: string, file: File, totalChunks: number): Promise<void> {
+    const metadata = {
+      type: "file-metadata",
+      id: fileId,
+      name: file.name,
+      size: file.size,
+      fileType: file.type,
+      totalChunks,
+    };
+
+    const jsonString = JSON.stringify(metadata);
+    const binaryData = new TextEncoder().encode(jsonString);
+    if (this.connection) {
+      this.connection.send(binaryData);
+    }
+  }
+
+  private async sendFileChunks(fileId: string, file: File, totalChunks: number): Promise<void> {
+    const arrayBuffer = await file.arrayBuffer();
+
+    for (let i = 0; i < totalChunks; i++) {
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
+
+      const chunk = arrayBuffer.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      await this.sendChunk(fileId, i, chunk, totalChunks);
+    }
+  }
+
+  private async sendChunk(fileId: string, chunkIndex: number, chunk: ArrayBuffer, totalChunks: number): Promise<void> {
+    const chunkData = {
+      type: "file-chunk",
+      fileId,
+      chunkIndex,
+      chunk: Array.from(new Uint8Array(chunk)),
+    };
+
+    const chunkJsonString = JSON.stringify(chunkData);
+    const chunkBinaryData = new TextEncoder().encode(chunkJsonString);
+    if (this.connection) {
+      this.connection.send(chunkBinaryData);
+    }
+
+    const progress = ((chunkIndex + 1) / totalChunks) * 100;
+    this.updateFileProgress(fileId, progress);
+    this.resetTimeout();
+  }
+
+  private updateFileProgress(fileId: string, progress: number): void {
+    this.files = this.files.map((f) =>
+      f.id === fileId
+        ? { ...f, progress, status: progress === 100 ? "completed" : "transferring" }
+        : f
+    );
+  }
+
+  private handleFileSendError(fileId: string, fileName: string, error: unknown): void {
+    this.log("error", `Failed to send: ${fileName}`, String(error));
+    this.files = this.files.map((f) =>
+      f.id === fileId ? { ...f, status: "error", error: String(error) } : f
+    );
+  }
+
+  private handleSendError(err: unknown): void {
+    this.log("error", "Transfer failed", String(err));
+    this.error = "Failed to send files";
+    this.files = this.files.map((f) =>
+      f.status === "transferring" ? { ...f, status: "error" } : f
+    );
   }
 
   async sendText(text: string, contentType: string = 'text'): Promise<void> {
@@ -734,7 +772,7 @@ class PeerManager {
   submitVerificationCode(enteredCode: string): boolean {
     // Both devices can submit verification code for bidirectional clipboard
 
-    if (!enteredCode || enteredCode.length !== 6) {
+    if (!enteredCode?.length || enteredCode.length !== 6) {
       this.log(
         "error",
         "Invalid verification code format",
@@ -762,6 +800,35 @@ class PeerManager {
     }
 
     return true;
+  }
+
+  async sendSyncMessage(message: SyncMessage): Promise<void> {
+    if (this.connectionState !== "connected") {
+      this.error = "No active connection. Please verify the connection first.";
+      throw new Error("No active connection");
+    }
+
+    if (!this.isVerified) {
+      this.error = "Connection not verified yet";
+      throw new Error("Connection not verified");
+    }
+
+    try {
+      this.log("info", `Sending sync message: ${message.type}`);
+
+      // Send as binary data to avoid JSON size limits for large messages
+      const jsonString = JSON.stringify(message);
+      const binaryData = new TextEncoder().encode(jsonString);
+
+      if (this.connection) {
+        this.connection.send(binaryData);
+        this.log("success", `Sync message sent: ${message.type}`);
+      }
+    } catch (err) {
+      this.log("error", "Failed to send sync message", String(err));
+      this.error = "Failed to send sync message";
+      throw err;
+    }
   }
 
   disconnect(): void {

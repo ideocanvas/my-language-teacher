@@ -36,6 +36,7 @@ export function useWebRTC({
   const [error, setError] = useState<string | null>(null);
   const [verificationCode, setVerificationCode] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [peerId, setPeerId] = useState<string | null>(null);
 
   const log = useCallback(
     (level: LogEntry["level"], message: string, details?: string) => {
@@ -70,8 +71,9 @@ export function useWebRTC({
     });
 
     // Initialize connection
-    peerManager.connect(role, sessionId).then((peerId) => {
-      log("success", `Connected with peer ID: ${peerId}`);
+    peerManager.connect(role, sessionId).then((id) => {
+      setPeerId(id);
+      log("success", `Connected with peer ID: ${id}`);
     }).catch((err: Error) => {
       log("error", "Failed to connect", String(err));
     });
@@ -104,6 +106,7 @@ export function useWebRTC({
     sendFiles,
     verificationCode,
     isVerified,
+    peerId,
     submitVerificationCode,
     disconnect,
   };

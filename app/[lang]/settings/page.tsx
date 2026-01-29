@@ -10,8 +10,10 @@ import {
   Save,
   Settings as SettingsIcon,
   Trash2,
-  Upload
+  Upload,
+  RefreshCw
 } from "lucide-react";
+import { SyncPanel } from "@/components/sync-panel";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -19,7 +21,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
   const { settings, loading, updateSettings, resetSettings } = useSettings();
   const { vocabulary } = useVocabulary();
 
-  const [activeTab, setActiveTab] = useState<"general" | "data">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "data" | "sync">("general");
 
   // Form states
   const [dailyReviewGoal, setDailyReviewGoal] = useState(20);
@@ -124,6 +126,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
   const tabs = [
     { id: "general" as const, icon: SettingsIcon, label: "General" },
     { id: "data" as const, icon: Download, label: "Data Management" },
+    { id: "sync" as const, icon: RefreshCw, label: "Sync" },
   ];
 
   return (
@@ -370,6 +373,13 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Sync */}
+            {activeTab === "sync" && (
+              <div className="p-6">
+                <SyncPanel role="receiver" />
               </div>
             )}
 

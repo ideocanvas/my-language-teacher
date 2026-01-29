@@ -141,9 +141,9 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
         partOfSpeech: suggestion.partOfSpeech,
         definitions: [],
         exampleSentences: [],
-        tags: suggestion.tags,
+        tags: suggestion.tags ?? [],
         notes: suggestion.notes,
-        difficulty: suggestion.difficulty,
+        difficulty: suggestion.difficulty ?? 3,
       });
 
       setSavedWords((prev) => new Set(prev).add(suggestion.word));
@@ -309,9 +309,9 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                             )}
                           </div>
                           <p className="text-gray-700">{suggestion.translation}</p>
-                          {suggestion.tags.length > 0 && (
+                          {suggestion.tags && suggestion.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
-                              {suggestion.tags.map((tag) => (
+                              {suggestion.tags.map((tag: string) => (
                                 <span
                                   key={tag}
                                   className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded"

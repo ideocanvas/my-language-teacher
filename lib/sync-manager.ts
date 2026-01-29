@@ -1,12 +1,27 @@
-import { VocabularyEntry, SyncData, SyncStats } from "./vocabulary-types";
+import { VocabularyEntry, SyncData, SyncStats, SyncProfileInfo, SyncRequestMessage, SyncResponseMessage, SyncCompleteMessage, SyncErrorMessage } from "./vocabulary-types";
 
 /**
  * Sync Manager for P2P vocabulary synchronization
+ * Handles bidirectional sync with profile validation
  */
+
+export interface SyncOptions {
+  profileId: string;
+  profileName: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+}
+
+export interface SyncResult {
+  success: boolean;
+  stats?: SyncStats;
+  error?: string;
+}
 
 export class SyncManager {
   private lastSyncTime: number = 0;
   private syncInProgress = false;
+  private currentOptions: SyncOptions | null = null;
 
   constructor() {
     this.loadLastSyncTime();
@@ -32,8 +47,119 @@ export class SyncManager {
   }
 
   /**
+   * Set current sync options (profile and language settings)
+   */
+  setSyncOptions(options: SyncOptions) {
+    this.currentOptions = options;
+  }
+
+  /**
+   * Get current sync options
+   */
+  getSyncOptions(): SyncOptions | null {
+    return this.currentOptions;
+  }
+
+  /**
+   * Validate that remote profile matches local profile
+   * Returns true if profiles are compatible (same source/target languages)
+   */
+  validateProfileMatch(localOptions: SyncOptions, remoteProfile: SyncProfileInfo): { valid: boolean; reason?: string } {
+    // Check if languages match
+    if (localOptions.sourceLanguage !== remoteProfile.sourceLanguage) {
+      return {
+        valid: false,
+        reason: `Source language mismatch: local (${localOptions.sourceLanguage}) vs remote (${remoteProfile.sourceLanguage})`
+      };
+    }
+
+    if (localOptions.targetLanguage !== remoteProfile.targetLanguage) {
+      return {
+        valid: false,
+        reason: `Target language mismatch: local (${localOptions.targetLanguage}) vs remote (${remoteProfile.targetLanguage})`
+      };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Create sync request message
+   */
+  createSyncRequest(allEntries: VocabularyEntry[]): SyncRequestMessage {
+    if (!this.currentOptions) {
+      throw new Error("Sync options not set");
+    }
+
+    // Filter entries updated since last sync
+    const entriesToSend = allEntries.filter(
+      (entry) => entry.updatedAt > this.lastSyncTime
+    );
+
+    return {
+      type: "sync-request",
+      profile: {
+        profileId: this.currentOptions.profileId,
+        profileName: this.currentOptions.profileName,
+        sourceLanguage: this.currentOptions.sourceLanguage,
+        targetLanguage: this.currentOptions.targetLanguage,
+      },
+      lastSync: this.lastSyncTime,
+      vocabularyEntries: entriesToSend,
+    };
+  }
+
+  /**
+   * Create sync response message with vocabulary data
+   */
+  createSyncResponse(allEntries: VocabularyEntry[]): SyncResponseMessage {
+    if (!this.currentOptions) {
+      throw new Error("Sync options not set");
+    }
+
+    // Filter entries updated since last sync
+    const entriesToSend = allEntries.filter(
+      (entry) => entry.updatedAt > this.lastSyncTime
+    );
+
+    return {
+      type: "sync-response",
+      profile: {
+        profileId: this.currentOptions.profileId,
+        profileName: this.currentOptions.profileName,
+        sourceLanguage: this.currentOptions.sourceLanguage,
+        targetLanguage: this.currentOptions.targetLanguage,
+      },
+      vocabularyEntries: entriesToSend,
+      timestamp: Date.now(),
+    };
+  }
+
+  /**
+   * Create sync complete message
+   */
+  createSyncComplete(stats: SyncStats): SyncCompleteMessage {
+    return {
+      type: "sync-complete",
+      timestamp: Date.now(),
+      stats,
+    };
+  }
+
+  /**
+   * Create sync error message
+   */
+  createSyncError(error: string): SyncErrorMessage {
+    return {
+      type: "sync-error",
+      error,
+    };
+  }
+
+  /**
    * Merge local and remote vocabulary entries
    * Uses timestamp-based merge strategy
+   * Only adds missing entries, never deletes
    */
   mergeEntries(
     localEntries: VocabularyEntry[],
@@ -48,13 +174,21 @@ export class SyncManager {
       totalMerged: 0,
     };
 
+    // Ensure arrays are defined
+    const safeLocalEntries = localEntries || [];
+    const safeRemoteEntries = remoteEntries || [];
+
     // Add all local entries
-    localEntries.forEach((entry) => {
-      merged.set(entry.id, entry);
+    safeLocalEntries.forEach((entry) => {
+      if (entry?.id) {
+        merged.set(entry.id, entry);
+      }
     });
 
     // Merge remote entries
-    remoteEntries.forEach((remoteEntry) => {
+    safeRemoteEntries.forEach((remoteEntry) => {
+      if (!remoteEntry?.id) return;
+
       const localEntry = merged.get(remoteEntry.id);
 
       if (localEntry) {
@@ -80,7 +214,7 @@ export class SyncManager {
         }
         // If timestamps are equal, keep local (no stats change)
       } else {
-        // New entry from remote
+        // New entry from remote - add to local
         merged.set(remoteEntry.id, remoteEntry);
         stats.remoteAdded++;
         stats.totalMerged++;
@@ -94,7 +228,52 @@ export class SyncManager {
   }
 
   /**
-   * Prepare sync data for sending
+   * Process received sync response
+   * Validates profile and merges data
+   */
+  async processSyncResponse(
+    localOptions: SyncOptions,
+    response: SyncResponseMessage,
+    localEntries: VocabularyEntry[],
+    saveCallback: (entries: VocabularyEntry[]) => Promise<void>
+  ): Promise<SyncResult> {
+    if (this.syncInProgress) {
+      return { success: false, error: "Sync already in progress" };
+    }
+
+    this.syncInProgress = true;
+
+    try {
+      // Validate profile match
+      const validation = this.validateProfileMatch(localOptions, response.profile);
+      if (!validation.valid) {
+        return { success: false, error: validation.reason };
+      }
+
+      // Merge entries
+      const { entries, stats } = this.mergeEntries(
+        localEntries,
+        response.vocabularyEntries
+      );
+
+      // Save merged entries
+      await saveCallback(entries);
+
+      // Update last sync time
+      this.lastSyncTime = Math.max(this.lastSyncTime, response.timestamp);
+      this.saveLastSyncTime();
+
+      return { success: true, stats };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      return { success: false, error: errorMessage };
+    } finally {
+      this.syncInProgress = false;
+    }
+  }
+
+  /**
+   * Prepare sync data for sending (legacy method)
    * Includes entries updated since last sync
    */
   prepareSyncData(allEntries: VocabularyEntry[]): SyncData {
@@ -109,7 +288,7 @@ export class SyncManager {
   }
 
   /**
-   * Process received sync data
+   * Process received sync data (legacy method)
    * Merges with local entries and updates last sync time
    */
   async processSyncData(
@@ -144,9 +323,9 @@ export class SyncManager {
   }
 
   /**
-   * Get sync request for initiating sync
+   * Get sync request for initiating sync (legacy method)
    */
-  createSyncRequest(): { lastSync: number } {
+  createSyncRequestLegacy(): { lastSync: number } {
     return {
       lastSync: this.lastSyncTime,
     };

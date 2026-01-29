@@ -120,10 +120,49 @@ export interface WordSuggestion {
   translation: string
   pronunciation?: string
   partOfSpeech?: string
-  difficulty: DifficultyRating
-  tags: string[]
+  tags?: string[]
   notes?: string
+  difficulty?: DifficultyLevel
 }
+
+// Sync message types for P2P synchronization
+export interface SyncProfileInfo {
+  profileId: string
+  profileName: string
+  sourceLanguage: string
+  targetLanguage: string
+}
+
+export interface SyncRequestMessage {
+  type: "sync-request"
+  profile: SyncProfileInfo
+  lastSync: number
+  vocabularyEntries: VocabularyEntry[]
+}
+
+export interface SyncResponseMessage {
+  type: "sync-response"
+  profile: SyncProfileInfo
+  vocabularyEntries: VocabularyEntry[]
+  timestamp: number
+}
+
+export interface SyncCompleteMessage {
+  type: "sync-complete"
+  timestamp: number
+  stats: SyncStats
+}
+
+export interface SyncErrorMessage {
+  type: "sync-error"
+  error: string
+}
+
+export type SyncMessage =
+  | SyncRequestMessage
+  | SyncResponseMessage
+  | SyncCompleteMessage
+  | SyncErrorMessage
 
 // Sentence Translation Response
 export interface SentenceTranslationResponse {
