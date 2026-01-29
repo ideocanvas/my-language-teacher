@@ -5,10 +5,11 @@ import { useQuiz } from "@/hooks/use-quiz";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { Check, Home, Volume2, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { getTranslations, type Locale } from "@/lib/client-i18n";
 
 export default function TypingQuizPage({ params }: { params: Promise<{ lang: string }> }) {
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState<Locale>("en");
   const router = useRouter();
   const { vocabulary, reviewWord, dailyReview } = useVocabulary();
   const {
@@ -123,12 +124,14 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
     }
   };
 
+  const t = useMemo(() => getTranslations(lang), [lang]);
+
   if (quizLoading || !dailyReview) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading quiz...</p>
+          <p className="text-gray-600">{t("quiz.flashcard.loading")}</p>
         </div>
       </div>
     );
@@ -141,13 +144,13 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
             <Check className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">All caught up!</h2>
-            <p className="text-gray-600 mb-6">No words due for review right now</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("quiz.flashcard.allCaughtUp")}</h2>
+            <p className="text-gray-600 mb-6">{t("quiz.flashcard.noWordsDue")}</p>
             <button
               onClick={() => router.push(`/${lang}`)}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              Go to Dashboard
+              {t("quiz.flashcard.goToDashboard")}
             </button>
           </div>
         </div>
@@ -167,11 +170,11 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
             >
               <Home className="w-6 h-6 mx-auto" />
             </button>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No active quiz</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t("quiz.flashcard.noActiveQuiz")}</h2>
             <p className="text-gray-600 mb-6">
               {dailyReview.dueCount > 0
-                ? "Click below to start reviewing your due words"
-                : "Add some vocabulary to start learning"}
+                ? t("quiz.flashcard.clickToStart")
+                : t("quiz.flashcard.addVocabulary")}
             </p>
             {dailyReview.dueCount > 0 && (
               <button
@@ -181,7 +184,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
                 }}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                Start Review ({dailyReview.dueCount} words)
+                {t("quiz.flashcard.startReview", { count: dailyReview.dueCount })}
               </button>
             )}
           </div>
@@ -201,13 +204,13 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">
-              Word {Math.min(progress.current + 1, progress.total)} of {progress.total}
+              {t("quiz.flashcard.cardProgress", { current: Math.min(progress.current + 1, progress.total), total: progress.total })}
             </span>
             <button
               onClick={handleCancel}
               className="text-sm text-gray-500 hover:text-gray-700"
             >
-              Quit
+              {t("quiz.flashcard.quit")}
             </button>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -222,7 +225,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
         {currentWord && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 mb-6">
             <div className="text-center mb-8">
-              <p className="text-sm text-gray-500 mb-4">Type the translation:</p>
+              <p className="text-sm text-gray-500 mb-4">{t("quiz.typing.typeTranslation")}</p>
               <div className="flex items-center justify-center gap-4">
                 <h2 className="text-4xl font-bold text-gray-900">{currentWord.word}</h2>
                 <button
@@ -251,7 +254,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
                   onChange={(e) => setUserAnswer(e.target.value)}
                   onKeyDown={handleKeyDown}
                   disabled={showResult}
-                  placeholder="Type your answer..."
+                  placeholder={t("quiz.fillBlank.enterWord")}
                   className={`w-full px-4 py-3 rounded-xl border-2 text-center text-lg font-medium transition-all ${getInputClassName()}`}
                   autoFocus
                 />
@@ -265,11 +268,11 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
                 >
                   {showAnswer ? (
                     <>
-                      <EyeOff className="w-4 h-4 mr-1" /> Hide answer
+                      <EyeOff className="w-4 h-4 mr-1" /> {t("quiz.fillBlank.showAnswer")}
                     </>
                   ) : (
                     <>
-                      <Eye className="w-4 h-4 mr-1" /> Show answer
+                      <Eye className="w-4 h-4 mr-1" /> {t("quiz.fillBlank.showAnswer")}
                     </>
                   )}
                 </button>
@@ -278,7 +281,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
               {/* Show correct answer */}
               {showAnswer && !showResult && (
                 <p className="mt-4 text-center text-gray-600">
-                  Answer: <span className="font-medium text-gray-900">{currentWord.translation}</span>
+                  {currentWord.translation}
                 </p>
               )}
 
@@ -286,12 +289,12 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
               {showResult && (
                 <div className="mt-6 text-center">
                   {isCorrect ? (
-                    <p className="text-green-600 font-medium">Correct! Well done!</p>
+                    <p className="text-green-600 font-medium">{t("quiz.multipleChoice.correct")}</p>
                   ) : (
                     <div>
-                      <p className="text-red-600 font-medium mb-2">Incorrect</p>
+                      <p className="text-red-600 font-medium mb-2">{t("quiz.multipleChoice.incorrect")}</p>
                       <p className="text-gray-600">
-                        Correct answer: <span className="font-medium text-gray-900">{currentWord.translation}</span>
+                        {currentWord.translation}
                       </p>
                     </div>
                   )}
@@ -308,7 +311,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
               onClick={handleNext}
               className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
             >
-              {isComplete() ? "Finish" : "Next Word"}
+              {isComplete() ? t("quiz.flashcard.goToDashboard") : t("quiz.multipleChoice.nextQuestion")}
             </button>
           ) : (
             <button
@@ -316,7 +319,7 @@ export default function TypingQuizPage({ params }: { params: Promise<{ lang: str
               disabled={!userAnswer.trim()}
               className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Check Answer
+              {t("quiz.typing.checkAnswer")}
             </button>
           )}
         </div>
