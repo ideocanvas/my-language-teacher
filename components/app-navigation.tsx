@@ -18,7 +18,7 @@ const navItems = [
   { href: "/en/vocabulary", icon: BookOpen, label: "Vocabulary" },
   { href: "/en/quiz", icon: Brain, label: "Quiz" },
   { href: "/en/ai", icon: Sparkles, label: "AI Assistant" },
-  { href: "/en/vocabulary/add", icon: ArrowRight, label: "Translate" },
+  { href: "/en/translate", icon: ArrowRight, label: "Translate" },
   { href: "/en/settings", icon: Settings, label: "Settings" },
 ];
 
@@ -42,7 +42,7 @@ export function AppNavigation() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-              const isTranslateButton = item.href === "/en/vocabulary/add";
+              const isTranslateButton = item.href === "/en/translate";
 
               return (
                 <Link
@@ -94,7 +94,7 @@ export function AppNavigation() {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-                const isTranslateButton = item.href === "/en/vocabulary/add";
+                const isTranslateButton = item.href === "/en/translate";
 
                 return (
                   <Link

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import { useVocabulary } from "@/hooks/use-vocabulary";
@@ -13,6 +13,9 @@ import {
   ArrowRight,
   Plus,
   Check,
+  Camera,
+  X,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +30,14 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
   const [translating, setTranslating] = useState(false);
   const [wordSuggestions, setWordSuggestions] = useState<WordSuggestion[]>([]);
   const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
+
+  // Camera state
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [extractingText, setExtractingText] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const loadParams = async () => {
@@ -161,6 +172,123 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
     }
   };
 
+  // Camera functions
+  const startCamera = async () => {
+    setCameraLoading(true);
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Wait for video to be ready before playing
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((err) => {
+            console.error("Failed to play video:", err);
+          });
+        };
+      }
+    } catch (err) {
+      console.error("Failed to start camera:", err);
+      toast.error("Failed to access camera. Please check permissions.");
+      setShowCamera(false);
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  };
+
+  const captureImage = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    // Calculate resized dimensions (max 1280px width or height)
+    const MAX_SIZE = 1280;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+
+    if (width > height) {
+      if (width > MAX_SIZE) {
+        height = Math.round((height * MAX_SIZE) / width);
+        width = MAX_SIZE;
+      }
+    } else {
+      if (height > MAX_SIZE) {
+        width = Math.round((width * MAX_SIZE) / height);
+        height = MAX_SIZE;
+      }
+    }
+
+    // Set canvas dimensions to resized size
+    canvas.width = width;
+    canvas.height = height;
+
+    // Draw video frame to canvas (resized)
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, width, height);
+
+    // Convert to base64 with reduced quality for smaller payload
+    const imageData = canvas.toDataURL("image/jpeg", 0.85);
+
+    // Stop camera
+    stopCamera();
+
+    // Extract text from image
+    setExtractingText(true);
+    try {
+      const response = await fetch("/api/vision/extract", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          image: imageData,
+          language: settings.sourceLanguage,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to extract text");
+      }
+
+      const data = await response.json();
+      if (data.text) {
+        setSourceText(data.text);
+        toast.success("Text extracted from image!");
+      } else {
+        toast.info("No text found in the image");
+      }
+    } catch (err) {
+      console.error("Text extraction failed:", err);
+      toast.error("Failed to extract text from image");
+    } finally {
+      setExtractingText(false);
+    }
+  };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
   const getLanguageName = (code: string) => {
     const names: Record<string, string> = {
       en: "English",
@@ -211,14 +339,28 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                 <span className="text-xs sm:text-sm text-gray-500">
                   {sourceText.length} chars
                 </span>
-                {sourceText && (
+                <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => speakText(sourceText, settings.sourceLanguage)}
-                    className="text-gray-500 hover:text-blue-600 transition-colors"
+                    onClick={startCamera}
+                    disabled={cameraLoading || extractingText}
+                    className="text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-50"
+                    title="Capture text from camera"
                   >
-                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    {cameraLoading || extractingText ? (
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
                   </button>
-                )}
+                  {sourceText && (
+                    <button
+                      onClick={() => speakText(sourceText, settings.sourceLanguage)}
+                      className="text-gray-500 hover:text-blue-600 transition-colors"
+                    >
+                      <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -259,6 +401,66 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
             </button>
           </div>
         </div>
+
+        {/* Camera Modal */}
+        {showCamera && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+            <div className="relative w-full max-w-lg bg-black rounded-xl overflow-hidden">
+              {/* Header */}
+              <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/70 to-transparent">
+                <span className="text-white font-medium text-sm">Camera</span>
+                <button
+                  onClick={stopCamera}
+                  className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Video */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full aspect-[4/3] object-cover bg-black"
+              />
+
+              {/* Loading State */}
+              {cameraLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-8 h-8 text-white animate-spin mb-2" />
+                    <span className="text-white text-sm">Starting camera...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden canvas for capturing */}
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Capture Button */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+                <div className="flex justify-center">
+                  <button
+                    onClick={captureImage}
+                    disabled={extractingText}
+                    className="w-16 h-16 rounded-full bg-white border-4 border-white/30 hover:border-white/50 transition-all disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {extractingText ? (
+                      <Loader2 className="w-6 h-6 text-gray-800 animate-spin" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-white" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-center text-white/80 text-xs mt-2">
+                  Tap to capture text
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Word Suggestions from Sentence Translation */}
         {wordSuggestions.length > 0 && (

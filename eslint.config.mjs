@@ -28,6 +28,9 @@ const eslintConfig = [
         HTMLInputElement: "readonly",
         HTMLParagraphElement: "readonly",
         HTMLHeadingElement: "readonly",
+        HTMLVideoElement: "readonly",
+        // Media types
+        MediaStream: "readonly",
         // WebRTC globals
         RTCPeerConnection: "readonly",
         RTCDataChannel: "readonly",
