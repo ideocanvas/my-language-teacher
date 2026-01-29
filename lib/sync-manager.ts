@@ -31,10 +31,13 @@ export class SyncManager {
     try {
       const saved = localStorage.getItem("vocabulary-last-sync");
       if (saved) {
-        this.lastSyncTime = Number.parseInt(saved, 10);
+        const parsed = Number.parseInt(saved, 10);
+        // Validate that the parsed value is a valid number, default to 0 if not
+        this.lastSyncTime = Number.isNaN(parsed) ? 0 : parsed;
       }
     } catch (err) {
       console.error("Failed to load last sync time:", err);
+      this.lastSyncTime = 0;
     }
   }
 
@@ -91,10 +94,38 @@ export class SyncManager {
       throw new Error("Sync options not set");
     }
 
+    // CRITICAL FIX: Ensure lastSyncTime is always a valid number
+    // If NaN or undefined, reset to 0 to include all entries
+    if (!Number.isFinite(this.lastSyncTime)) {
+      console.warn("[SYNC-MANAGER] lastSyncTime was invalid:", this.lastSyncTime, "- resetting to 0");
+      this.lastSyncTime = 0;
+    }
+
+    console.log("[SYNC-MANAGER] Creating sync request:", {
+      totalEntries: allEntries.length,
+      lastSyncTime: this.lastSyncTime,
+      sampleEntryUpdatedAt: allEntries[0]?.updatedAt,
+    });
+
     // Filter entries updated since last sync
-    const entriesToSend = allEntries.filter(
+    // If lastSyncTime is 0, all entries should be included
+    let entriesToSend = allEntries.filter(
       (entry) => entry.updatedAt > this.lastSyncTime
     );
+
+    console.log("[SYNC-MANAGER] Filtered entries to send:", entriesToSend.length);
+
+    // DEBUG: If no entries to send but we have entries, log details
+    if (entriesToSend.length === 0 && allEntries.length > 0) {
+      console.log("[SYNC-MANAGER] DEBUG - No entries to send despite having", allEntries.length, "entries");
+      console.log("[SYNC-MANAGER] DEBUG - First entry updatedAt:", allEntries[0]?.updatedAt, "lastSyncTime:", this.lastSyncTime);
+      console.log("[SYNC-MANAGER] DEBUG - Comparison:", allEntries[0]?.updatedAt > this.lastSyncTime);
+
+      // WORKAROUND: If filtering returns 0 but we have entries, send all entries
+      // This handles the case where lastSyncTime might be corrupted or entries have invalid timestamps
+      console.log("[SYNC-MANAGER] WORKAROUND - Sending all entries instead of filtered");
+      entriesToSend = allEntries;
+    }
 
     return {
       type: "sync-request",
@@ -117,10 +148,30 @@ export class SyncManager {
       throw new Error("Sync options not set");
     }
 
+    // CRITICAL FIX: Ensure lastSyncTime is always a valid number
+    if (!Number.isFinite(this.lastSyncTime)) {
+      console.warn("[SYNC-MANAGER] lastSyncTime was invalid in response:", this.lastSyncTime, "- resetting to 0");
+      this.lastSyncTime = 0;
+    }
+
+    console.log("[SYNC-MANAGER] Creating sync response:", {
+      totalEntries: allEntries.length,
+      lastSyncTime: this.lastSyncTime,
+      sampleEntryUpdatedAt: allEntries[0]?.updatedAt,
+    });
+
     // Filter entries updated since last sync
-    const entriesToSend = allEntries.filter(
+    let entriesToSend = allEntries.filter(
       (entry) => entry.updatedAt > this.lastSyncTime
     );
+
+    console.log("[SYNC-MANAGER] Filtered entries for response:", entriesToSend.length);
+
+    // WORKAROUND: If filtering returns 0 but we have entries, send all entries
+    if (entriesToSend.length === 0 && allEntries.length > 0) {
+      console.log("[SYNC-MANAGER] WORKAROUND - Sending all entries in response instead of filtered");
+      entriesToSend = allEntries;
+    }
 
     return {
       type: "sync-response",

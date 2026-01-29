@@ -27,6 +27,7 @@ export function useSync() {
   const [lastSync, setLastSync] = useState<number>(() => syncManager.getLastSyncTime());
   const peerManagerRef = useRef<PeerManager | null>(null);
   const pendingResponseRef = useRef<((value: SyncResult) => void) | null>(null);
+  const isSyncingRef = useRef(false); // Ref for immediate sync state check
 
   // Initialize PeerManager subscription
   useEffect(() => {
@@ -85,7 +86,15 @@ export function useSync() {
 
   // Handle incoming sync request (we are the receiver)
   const handleSyncRequest = async (request: SyncRequestMessage) => {
+    // Guard: prevent multiple syncs using ref for immediate check
+    if (isSyncingRef.current) {
+      console.log("[SYNC] Already syncing (ref), skipping sync request silently");
+      return;
+    }
+    isSyncingRef.current = true;
+
     try {
+      setSyncing(true);
       setSyncStatus({ state: "syncing", message: "Received sync request, processing..." });
 
       // Debug logging
@@ -157,13 +166,18 @@ export function useSync() {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Sync failed";
+      console.error("[SYNC] handleSyncRequest error:", err);
       setSyncStatus({ state: "error", message: errorMessage });
       toast.error(`Sync failed: ${errorMessage}`);
 
       // Send error message
       const errorMsg = syncManager.createSyncError(errorMessage);
       await peerManagerRef.current?.sendSyncMessage(errorMsg);
+    } finally {
+      isSyncingRef.current = false;
+      setSyncing(false);
     }
+    // Note: We don't send error for duplicate syncs - just return silently above
   };
 
   // Handle incoming sync response (we are the sender)
@@ -217,6 +231,7 @@ export function useSync() {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Sync failed";
+      console.error("[SYNC] handleSyncResponse error:", err);
       setSyncStatus({ state: "error", message: errorMessage });
       toast.error(`Sync failed: ${errorMessage}`);
 
@@ -234,6 +249,8 @@ export function useSync() {
 
   // Handle sync complete message
   const handleSyncComplete = (message: SyncCompleteMessage) => {
+    setSyncing(false);
+    isSyncingRef.current = false;
     setSyncStats(message.stats);
     setLastSync(syncManager.getLastSyncTime());
     setSyncStatus({
@@ -268,13 +285,27 @@ export function useSync() {
 
   // Start sync process (initiated by sender)
   const startSync = useCallback(async (): Promise<SyncResult> => {
+    console.log("[SYNC] startSync called, isVerified:", isVerified, "syncing:", syncing);
+
+    // Guard: prevent multiple syncs using ref for immediate check
+    if (isSyncingRef.current) {
+      console.log("[SYNC] Already syncing (ref), skipping silently");
+      // Don't show error toast for duplicate attempts - just return silently
+      return { success: false, error: "Already syncing" };
+    }
+    isSyncingRef.current = true;
+
     if (!isVerified) {
+      isSyncingRef.current = false;
       toast.error("Connection not verified");
       return { success: false, error: "Connection not verified" };
     }
 
     const localOptions = syncManager.getSyncOptions();
+    console.log("[SYNC] Sync options:", localOptions);
+
     if (!localOptions) {
+      isSyncingRef.current = false;
       toast.error("Sync options not configured");
       return { success: false, error: "Sync options not configured" };
     }
@@ -312,7 +343,13 @@ export function useSync() {
       const errorMessage = err instanceof Error ? err.message : "Failed to start sync";
       setSyncStatus({ state: "error", message: errorMessage });
       setSyncing(false);
+      isSyncingRef.current = false;
       return { success: false, error: errorMessage };
+    } finally {
+      // Reset ref after sync completes or times out
+      setTimeout(() => {
+        isSyncingRef.current = false;
+      }, 100);
     }
   }, [isVerified]);
 

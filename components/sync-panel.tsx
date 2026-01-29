@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSync } from "@/hooks/use-sync";
 import { useProfiles } from "@/hooks/use-profiles";
 import { useSettings } from "@/hooks/use-settings";
@@ -35,6 +35,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showQR, setShowQR] = useState(false);
   const [localSessionId, setLocalSessionId] = useState<string>("");
+  const hasAutoSynced = useRef(false);
 
   // Initialize sync with profile and language settings
   useEffect(() => {
@@ -51,8 +52,6 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
   // WebRTC hook for connection
   const {
     connectionState,
-    verificationCode,
-    submitVerificationCode,
     disconnect,
     peerId,
   } = useWebRTC({
@@ -72,19 +71,23 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
   }, [role, peerId]);
 
   const handleStartSync = async () => {
+    console.log("[SYNC-PANEL] handleStartSync called, isVerified:", isVerified, "syncing:", syncing);
+
     if (!isVerified) {
       toast.error("Please verify the connection first");
       return;
     }
 
     try {
+      console.log("[SYNC-PANEL] Calling startSync...");
       const result = await startSync();
+      console.log("[SYNC-PANEL] startSync result:", result);
       if (!result.success) {
         toast.error(result.error || "Sync failed");
       }
     } catch (err) {
       toast.error("Failed to start sync");
-      console.error("Sync error:", err);
+      console.error("[SYNC-PANEL] Sync error:", err);
     }
   };
 
@@ -92,21 +95,23 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
     resetSync();
     disconnect();
     setLogs([]);
+    hasAutoSynced.current = false; // Reset auto-sync flag
     if (role === "receiver") {
       setLocalSessionId("");
       setShowQR(false);
     }
   };
 
-  const [inputCode, setInputCode] = useState("");
-
-  const handleSubmitCode = () => {
-    if (inputCode.length === 6) {
-      submitVerificationCode(inputCode);
-    } else {
-      toast.error("Please enter a 6-digit code");
+  // Auto-start sync when connection is verified and not already syncing
+  // Only the SENDER should initiate sync to avoid conflicts
+  // Only trigger once using ref to prevent multiple syncs
+  useEffect(() => {
+    if (role === "sender" && isVerified && !syncing && syncStatus.state === "idle" && !hasAutoSynced.current) {
+      console.log("[SYNC-PANEL] Auto-starting sync after verification (once)");
+      hasAutoSynced.current = true;
+      void handleStartSync();
     }
-  };
+  }, [role, isVerified, syncing, syncStatus.state]);
 
   const getStatusIcon = () => {
     switch (syncStatus.state) {
@@ -140,7 +145,22 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
     : "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* QR Code for Receiver - Show at top */}
+      {role === "receiver" && showQR && syncUrl && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Scan to Connect</h3>
+            <div className="flex justify-center">
+              <QRCodeGenerator url={syncUrl} />
+            </div>
+            <p className="text-sm text-gray-600 mt-4">
+              Scan this QR code with the sender device to start syncing
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Connection Status */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
@@ -188,53 +208,7 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
           </div>
         )}
 
-        {/* QR Code for Receiver */}
-        {role === "receiver" && showQR && syncUrl && (
-          <div className="mb-4">
-            <QRCodeGenerator url={syncUrl} />
-            <p className="text-sm text-gray-600 mt-2 text-center">
-              Scan this QR code with the sender device
-            </p>
-          </div>
-        )}
 
-        {/* Verification Code Display for Sender */}
-        {role === "sender" && connectionState === "verifying" && verificationCode && (
-          <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <p className="text-sm font-medium text-yellow-900 mb-2">
-              Enter this code on the receiver device:
-            </p>
-            <p className="text-3xl font-bold text-yellow-700 tracking-widest text-center py-2">
-              {verificationCode}
-            </p>
-          </div>
-        )}
-
-        {/* Verification Code Input for Receiver */}
-        {role === "receiver" && connectionState === "verifying" && (
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-medium text-blue-900 mb-2">
-              Enter the verification code from the sender:
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                maxLength={6}
-                value={inputCode}
-                onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ""))}
-                placeholder="000000"
-                className="flex-1 px-4 py-2 text-center text-2xl tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <button
-                onClick={handleSubmitCode}
-                disabled={inputCode.length !== 6}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Verify
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Sync Status */}
         {syncStatus.state !== "idle" && (
@@ -251,11 +225,6 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
             )}
           </div>
         )}
-
-        {/* Last Sync */}
-        <div className="mb-4 text-sm text-gray-600">
-          Last sync: {formatLastSync()}
-        </div>
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">
@@ -278,13 +247,17 @@ export function SyncPanel({ role, sessionId }: SyncPanelProps) {
             onClick={handleReset}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
-            Reset Connection
+            Reset
           </button>
         </div>
       </div>
 
-      {/* Connection Logger */}
-      <ConnectionLogger logs={logs} />
+      {/* Connection Logger - Collapsible */}
+      {logs.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <ConnectionLogger logs={logs} />
+        </div>
+      )}
     </div>
   );
 }

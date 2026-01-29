@@ -98,8 +98,8 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading quiz...</p>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-sm sm:text-base">Loading quiz...</p>
         </div>
       </div>
     );
@@ -109,14 +109,14 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNavigation />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
-            <Check className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">All caught up!</h2>
-            <p className="text-gray-600 mb-6">No words due for review right now</p>
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-16 text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-12">
+            <Check className="w-12 h-12 sm:w-16 sm:h-16 text-green-600 mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">All caught up!</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">No words due for review right now</p>
             <button
               onClick={() => router.push(`/${lang}`)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+              className="bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
             >
               Go to Dashboard
             </button>
@@ -130,16 +130,16 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     return (
       <div className="min-h-screen bg-gray-50">
         <AppNavigation />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div className="max-w-2xl mx-auto px-4 py-8 sm:py-16 text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-12">
             <button
               onClick={() => router.push(`/${lang}`)}
               className="mb-4 text-gray-500 hover:text-gray-700"
             >
-              <Home className="w-6 h-6 mx-auto" />
+              <Home className="w-5 h-5 sm:w-6 sm:h-6 mx-auto" />
             </button>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No active quiz</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No active quiz</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
               {dailyReview.dueCount > 0
                 ? "Click below to start reviewing your due words"
                 : "Add some vocabulary to start learning"}
@@ -150,7 +150,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                   startQuiz("flashcard", dailyReview.dueWords);
                   setStartTime(Date.now());
                 }}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                className="bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
                 Start Review ({dailyReview.dueCount} words)
               </button>
@@ -165,16 +165,16 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
     <div className="min-h-screen bg-gray-50">
       <AppNavigation />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Progress */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">
+            <span className="text-xs sm:text-sm text-gray-600">
               Card {Math.min(progress.current + 1, progress.total)} of {progress.total}
             </span>
             <button
               onClick={handleCancel}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-xs sm:text-sm text-gray-500 hover:text-gray-700"
             >
               Quit
             </button>
@@ -198,7 +198,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                   handleFlip();
                 }
               }}
-              className={`w-full text-left bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8 min-h-[400px] cursor-pointer transition-all duration-500 ${
+              className={`w-full text-left bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-4 sm:p-8 min-h-[280px] sm:min-h-[400px] cursor-pointer transition-all duration-500 ${
                 flipped ? "border-blue-300" : "hover:border-blue-200"
               }`}
             >
@@ -207,21 +207,21 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                 {flipped ? (
                   // Back of card
                   <div className="animate-fade-in">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
                       {currentWord.translation}
                     </h2>
 
                     {/* Pronunciation */}
                     {currentWord.pronunciation && (
-                      <p className="text-gray-500 font-mono mb-4">
+                      <p className="text-gray-500 font-mono mb-3 sm:mb-4 text-sm sm:text-base">
                         /{currentWord.pronunciation}/
                       </p>
                     )}
 
                     {/* Example sentence */}
                     {currentWord.exampleSentences.length > 0 && (
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <p className="text-gray-700 italic">
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
+                        <p className="text-gray-700 italic text-sm sm:text-base">
                           "{currentWord.exampleSentences[0]}"
                         </p>
                       </div>
@@ -229,11 +229,11 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
 
                     {/* Tags */}
                     {currentWord.tags.length > 0 && (
-                      <div className="flex flex-wrap justify-center gap-2 mb-4">
+                      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                         {currentWord.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm"
+                            className="bg-gray-100 text-gray-600 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm"
                           >
                             {tag}
                           </span>
@@ -241,13 +241,13 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                       </div>
                     )}
 
-                    <p className="text-sm text-gray-400 mt-4">Click to flip back</p>
+                    <p className="text-xs sm:text-sm text-gray-400 mt-3 sm:mt-4">Click to flip back</p>
                   </div>
                 ) : (
                   // Front of card
                   <div className="animate-fade-in">
-                    <div className="flex items-center justify-center mb-4">
-                      <h2 className="text-4xl font-bold text-gray-900">
+                    <div className="flex items-center justify-center mb-3 sm:mb-4">
+                      <h2 className="text-2xl sm:text-4xl font-bold text-gray-900">
                         {currentWord.word}
                       </h2>
                       <button
@@ -255,27 +255,27 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
                           e.stopPropagation();
                           speakWord(currentWord.word);
                         }}
-                        className="ml-4 p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="ml-3 sm:ml-4 p-1.5 sm:p-2 text-gray-400 hover:text-blue-600 transition-colors"
                       >
-                        <Volume2 className="w-6 h-6" />
+                        <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
                     </div>
 
                     {/* Part of speech */}
                     {currentWord.partOfSpeech && (
-                      <p className="text-gray-500 capitalize mb-4">
+                      <p className="text-gray-500 capitalize mb-3 sm:mb-4 text-sm sm:text-base">
                         {currentWord.partOfSpeech}
                       </p>
                     )}
 
                     {/* Definitions */}
                     {currentWord.definitions.length > 0 && (
-                      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                        <p className="text-gray-700">{currentWord.definitions[0]}</p>
+                      <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
+                        <p className="text-gray-700 text-sm sm:text-base">{currentWord.definitions[0]}</p>
                       </div>
                     )}
 
-                    <p className="text-sm text-gray-400 mt-8">Click to reveal answer</p>
+                    <p className="text-xs sm:text-sm text-gray-400 mt-6 sm:mt-8">Click to reveal answer</p>
                   </div>
                 )}
               </div>
@@ -285,36 +285,36 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
 
         {/* Rating buttons */}
         {flipped && currentWord && (
-          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-slide-up">
-            <p className="text-center text-gray-700 mb-4">How well did you know this?</p>
+          <div className="mt-4 sm:mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 animate-slide-up">
+            <p className="text-center text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base">How well did you know this?</p>
             <div className="grid grid-cols-4 gap-2 sm:gap-4">
               <button
                 onClick={() => handleRate(0)}
-                className="py-3 px-4 rounded-lg font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200"
+                className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-red-100 text-red-700 hover:bg-red-200"
               >
-                <div className="text-sm hidden sm:inline">Again</div>
-                <X className="w-5 h-5 sm:hidden mx-auto" />
+                <div className="text-xs sm:text-sm hidden sm:inline">Again</div>
+                <X className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(1)}
-                className="py-3 px-4 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"
+                className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"
               >
-                <div className="text-sm hidden sm:inline">Hard</div>
-                <RotateCw className="w-5 h-5 sm:hidden mx-auto" />
+                <div className="text-xs sm:text-sm hidden sm:inline">Hard</div>
+                <RotateCw className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(3)}
-                className="py-3 px-4 rounded-lg font-medium transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
               >
-                <div className="text-sm hidden sm:inline">Good</div>
-                <Check className="w-5 h-5 sm:hidden mx-auto" />
+                <div className="text-xs sm:text-sm hidden sm:inline">Good</div>
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
               <button
                 onClick={() => handleRate(5)}
-                className="py-3 px-4 rounded-lg font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200"
+                className="py-2 sm:py-3 px-2 sm:px-4 rounded-lg font-medium transition-colors bg-green-100 text-green-700 hover:bg-green-200"
               >
-                <div className="text-sm hidden sm:inline">Easy</div>
-                <Check className="w-5 h-5 sm:hidden mx-auto" />
+                <div className="text-xs sm:text-sm hidden sm:inline">Easy</div>
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 sm:hidden mx-auto" />
               </button>
             </div>
           </div>
@@ -322,7 +322,7 @@ export default function FlashcardQuizPage({ params }: { params: Promise<{ lang: 
 
         {/* Instructions */}
         {!flipped && (
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-500">
             <p>Click the card to reveal the answer</p>
             <p>Rate your knowledge to schedule the next review</p>
           </div>

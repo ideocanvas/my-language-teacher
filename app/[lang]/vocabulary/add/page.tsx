@@ -181,16 +181,16 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
     <div className="min-h-screen bg-gray-50">
       <AppNavigation />
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Translation Area */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4 sm:mb-6">
           {/* Language Bar */}
-          <div className="relative flex items-center justify-center px-6 py-3 bg-gray-50 border-b">
-            <span className="absolute left-6 text-sm font-medium text-gray-700">
+          <div className="relative flex items-center justify-center px-4 sm:px-6 py-3 bg-gray-50 border-b">
+            <span className="absolute left-4 sm:left-6 text-xs sm:text-sm font-medium text-gray-700 truncate max-w-[40%]">
               {getLanguageName(settings.sourceLanguage)}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-400" />
-            <span className="absolute right-6 text-sm font-medium text-gray-700">
+            <span className="absolute right-4 sm:right-6 text-xs sm:text-sm font-medium text-gray-700 truncate max-w-[40%]">
               {getLanguageName(settings.targetLanguage)}
             </span>
           </div>
@@ -198,25 +198,25 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
           {/* Translation Boxes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* Source Text */}
-            <div className="border-r border-gray-200">
+            <div className="border-b md:border-b-0 md:border-r border-gray-200">
               <textarea
                 value={sourceText}
                 onChange={(e) => setSourceText(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Enter text to translate..."
-                rows={8}
-                className="w-full px-6 py-4 resize-none focus:outline-none text-lg"
+                rows={6}
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 resize-none focus:outline-none text-base sm:text-lg"
               />
-              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t">
-                <span className="text-sm text-gray-500">
-                  {sourceText.length} characters
+              <div className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 bg-gray-50 border-t">
+                <span className="text-xs sm:text-sm text-gray-500">
+                  {sourceText.length} chars
                 </span>
                 {sourceText && (
                   <button
                     onClick={() => speakText(sourceText, settings.sourceLanguage)}
                     className="text-gray-500 hover:text-blue-600 transition-colors"
                   >
-                    <Volume2 className="w-5 h-5" />
+                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 )}
               </div>
@@ -228,19 +228,19 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                 value={targetText}
                 readOnly
                 placeholder="Translation will appear here..."
-                rows={8}
-                className="w-full px-6 py-4 resize-none focus:outline-none text-lg bg-gray-50"
+                rows={6}
+                className="w-full px-4 sm:px-6 py-3 sm:py-4 resize-none focus:outline-none text-base sm:text-lg bg-gray-50"
               />
-              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t">
-                <span className="text-sm text-gray-500">
-                  {targetText.length} characters
+              <div className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 bg-gray-50 border-t">
+                <span className="text-xs sm:text-sm text-gray-500">
+                  {targetText.length} chars
                 </span>
                 {targetText && (
                   <button
                     onClick={() => speakText(targetText, settings.targetLanguage)}
                     className="text-gray-500 hover:text-blue-600 transition-colors"
                   >
-                    <Volume2 className="w-5 h-5" />
+                    <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 )}
               </div>
@@ -248,13 +248,13 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
           </div>
 
           {/* Translate Button */}
-          <div className="px-6 py-4 bg-gray-50 border-t">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t">
             <button
               onClick={handleTranslate}
               disabled={translating || !sourceText.trim()}
-              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base"
             >
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>{translating ? "Translating..." : "Translate"}</span>
             </button>
           </div>
@@ -262,59 +262,59 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
         {/* Word Suggestions from Sentence Translation */}
         {wordSuggestions.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-            <div className="px-6 py-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
-              <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4 sm:mb-6">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
+              <h3 className="font-semibold text-gray-900 flex items-center space-x-2 text-sm sm:text-base">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 <span>Words to Learn from This Sentence</span>
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">
                 Click the + button to save words to your vocabulary
               </p>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                 {wordSuggestions.map((suggestion) => {
                   const isSaved = savedWords.has(suggestion.word);
                   return (
                     <div
                       key={suggestion.word}
-                      className={`border rounded-lg p-4 transition-colors ${
+                      className={`border rounded-lg p-3 sm:p-4 transition-colors ${
                         isSaved
                           ? "bg-green-50 border-green-200"
                           : "bg-gray-50 border-gray-200 hover:border-blue-300"
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-bold text-gray-900">{suggestion.word}</span>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                            <span className="font-bold text-gray-900 text-sm sm:text-base">{suggestion.word}</span>
                             <button
                               onClick={() => speakText(suggestion.word, settings.sourceLanguage)}
                               className="text-gray-400 hover:text-blue-600 transition-colors"
                               title="Listen"
                             >
-                              <Volume2 className="w-4 h-4" />
+                              <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                             {suggestion.pronunciation && (
-                              <span className="text-gray-500 text-sm font-mono">
+                              <span className="text-gray-500 text-xs sm:text-sm font-mono">
                                 /{suggestion.pronunciation}/
                               </span>
                             )}
                             {suggestion.partOfSpeech && (
-                              <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                              <span className="text-xs text-gray-500 bg-gray-200 px-1.5 sm:px-2 py-0.5 rounded">
                                 {suggestion.partOfSpeech}
                               </span>
                             )}
                           </div>
-                          <p className="text-gray-700">{suggestion.translation}</p>
+                          <p className="text-gray-700 text-sm sm:text-base">{suggestion.translation}</p>
                           {suggestion.tags && suggestion.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
                               {suggestion.tags.map((tag: string) => (
                                 <span
                                   key={tag}
-                                  className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded"
+                                  className="text-xs bg-blue-100 text-blue-700 px-1.5 sm:px-2 py-0.5 rounded"
                                 >
                                   {tag}
                                 </span>
@@ -322,13 +322,13 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                             </div>
                           )}
                           {suggestion.notes && (
-                            <p className="text-sm text-gray-500 mt-2 italic">{suggestion.notes}</p>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1.5 sm:mt-2 italic">{suggestion.notes}</p>
                           )}
                         </div>
                         <button
                           onClick={() => saveSuggestedWord(suggestion)}
                           disabled={isSaved}
-                          className={`ml-3 p-2 rounded-lg transition-colors ${
+                          className={`flex-shrink-0 p-1.5 sm:p-2 rounded-lg transition-colors ${
                             isSaved
                               ? "bg-green-100 text-green-600 cursor-default"
                               : "bg-blue-100 text-blue-600 hover:bg-blue-200"
@@ -336,9 +336,9 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
                           title={isSaved ? "Saved" : "Save to vocabulary"}
                         >
                           {isSaved ? (
-                            <Check className="w-5 h-5" />
+                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                           ) : (
-                            <Plus className="w-5 h-5" />
+                            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                           )}
                         </button>
                       </div>
@@ -351,16 +351,16 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
         )}
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => router.push(`/${lang}/vocabulary`)}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-left hover:border-blue-300 transition-colors group"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 text-left hover:border-blue-300 transition-colors group"
           >
             <div className="flex items-center space-x-3">
-              <BookOpen className="w-6 h-6 text-blue-600" />
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
               <div>
-                <h3 className="font-semibold text-gray-900">View Vocabulary</h3>
-                <p className="text-sm text-gray-600">
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">View Vocabulary</h3>
+                <p className="text-xs sm:text-sm text-gray-600">
                   {vocabulary.length} word{vocabulary.length === 1 ? "" : "s"} saved
                 </p>
               </div>
@@ -369,13 +369,13 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
 
           <button
             onClick={() => router.push(`/${lang}/quiz`)}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-left hover:border-blue-300 transition-colors group"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 text-left hover:border-blue-300 transition-colors group"
           >
             <div className="flex items-center space-x-3">
-              <Sparkles className="w-6 h-6 text-purple-600" />
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
               <div>
-                <h3 className="font-semibold text-gray-900">Take a Quiz</h3>
-                <p className="text-sm text-gray-600">Practice what you've learned</p>
+                <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Take a Quiz</h3>
+                <p className="text-xs sm:text-sm text-gray-600">Practice what you've learned</p>
               </div>
             </div>
           </button>

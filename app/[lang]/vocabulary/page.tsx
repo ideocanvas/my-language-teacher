@@ -127,18 +127,18 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
     <div className="min-h-screen bg-gray-50">
       <AppNavigation />
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Vocabulary</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Vocabulary</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
               {vocabulary.length} word{vocabulary.length === 1 ? "" : "s"} in your collection
             </p>
           </div>
           <button
             onClick={() => router.push(`/${lang}/vocabulary/add`)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center space-x-2"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Add Word</span>
@@ -146,8 +146,8 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex space-x-3 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
             <div className="flex-1 relative">
               <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
               <input
@@ -155,28 +155,30 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                 placeholder="Search words, translations, or tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               />
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center space-x-2 transition-colors ${
-                hasFilters
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              <Filter className="w-5 h-5" />
-              <span className="hidden sm:inline">Filters</span>
-            </button>
-            {hasFilters && (
+            <div className="flex gap-2">
               <button
-                onClick={clearFilters}
-                className="px-4 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors ${
+                  hasFilters
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
               >
-                Clear
+                <Filter className="w-5 h-5" />
+                <span className="hidden sm:inline">Filters</span>
               </button>
-            )}
+              {hasFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
           {showFilters && (
@@ -193,7 +195,7 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                       <button
                         key={tag}
                         onClick={() => toggleTag(tag)}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                        className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                           selectedTags.includes(tag)
                             ? "bg-blue-600 text-white"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -214,7 +216,7 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                     <button
                       key={level}
                       onClick={() => toggleDifficulty(level)}
-                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                         selectedDifficulty.includes(level)
                           ? getDifficultyColor(level)
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -241,29 +243,29 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
           }
           if (filteredVocabulary.length === 0) {
             return (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-12 text-center">
                 {hasFilters ? (
                   <>
-                    <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No matching words</h3>
-                    <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
+                    <Search className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No matching words</h3>
+                    <p className="text-sm sm:text-base text-gray-600 mb-4">Try adjusting your filters or search query</p>
                     <button
                       onClick={clearFilters}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base"
                     >
                       Clear filters
                     </button>
                   </>
                 ) : (
                   <>
-                    <Plus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No vocabulary yet</h3>
-                    <p className="text-gray-600 mb-4">
+                    <Plus className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No vocabulary yet</h3>
+                    <p className="text-sm sm:text-base text-gray-600 mb-4">
                       Start building your vocabulary by adding new words
                     </p>
                     <button
                       onClick={() => router.push(`/${lang}/vocabulary/add`)}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm sm:text-base"
                     >
                       Add your first word
                     </button>
@@ -273,7 +275,7 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
             );
           }
           return (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {filteredVocabulary.map((entry) => {
               const daysUntilReview = getDaysUntilReview(entry.srsData);
               const isDue = daysUntilReview === 0;
@@ -281,15 +283,15 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
               return (
                 <div
                   key={entry.id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-blue-300 transition-colors"
+                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:border-blue-300 transition-colors"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
                       {/* Word and pronunciation */}
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{entry.word}</h3>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900">{entry.word}</h3>
                         {entry.pronunciation && (
-                          <span className="text-gray-500 text-sm font-mono">
+                          <span className="text-gray-500 text-xs sm:text-sm font-mono">
                             /{entry.pronunciation}/
                           </span>
                         )}
@@ -297,32 +299,32 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                           onClick={() => speakWord(entry.word)}
                           className="text-gray-400 hover:text-blue-600 transition-colors"
                         >
-                          <Volume2 className="w-5 h-5" />
+                          <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(
                             entry.difficulty
                           )}`}
                         >
                           {entry.difficulty}
                         </span>
                         {entry.translationCount > 1 && (
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            Translated {entry.translationCount} times
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {entry.translationCount}x
                           </span>
                         )}
                       </div>
 
                       {/* Translation */}
-                      <p className="text-lg text-gray-700 mb-3">{entry.translation}</p>
+                      <p className="text-base sm:text-lg text-gray-700 mb-2 sm:mb-3">{entry.translation}</p>
 
                       {/* Tags */}
                       {entry.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3">
                           {entry.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm"
+                              className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs sm:text-sm"
                             >
                               {tag}
                             </span>
@@ -332,14 +334,14 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
 
                       {/* Example sentence */}
                       {entry.exampleSentences.length > 0 && (
-                        <p className="text-gray-600 text-sm italic mb-3">
+                        <p className="text-gray-600 text-xs sm:text-sm italic mb-2 sm:mb-3">
                           "{entry.exampleSentences[0]}"
                         </p>
                       )}
 
                       {/* Next review */}
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="w-4 h-4 mr-1" />
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         {isDue ? (
                           <span className="text-orange-600 font-medium">Due for review</span>
                         ) : (
@@ -351,20 +353,20 @@ export default function VocabularyListPage({ params }: { params: Promise<{ lang:
                     </div>
 
                     {/* Actions */}
-                    <div className="flex space-x-2 ml-4">
+                    <div className="flex space-x-1 sm:space-x-2 sm:ml-4">
                       <button
                         onClick={() => router.push(`/${lang}/vocabulary/${entry.id}`)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit"
                       >
-                        <Edit className="w-5 h-5" />
+                        <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(entry.id, entry.word)}
                         className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       </button>
                     </div>
                   </div>

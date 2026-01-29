@@ -133,15 +133,15 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
     <div className="min-h-screen bg-gray-50">
       <AppNavigation />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Configure your learning experience</p>
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+          <p className="text-sm sm:text-base text-gray-600">Configure your learning experience</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-2 mb-6 overflow-x-auto">
+        <div className="flex space-x-2 mb-4 sm:mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -149,13 +149,13 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                   isActive
                     ? "bg-blue-600 text-white"
                     : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -163,22 +163,22 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading settings...</p>
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-sm sm:text-base">Loading settings...</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             {/* General Settings */}
             {activeTab === "general" && (
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Language Settings
                   </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label htmlFor="sourceLanguage" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="sourceLanguage" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                         Source Language
                       </label>
                       <select
@@ -187,7 +187,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                         onChange={(e) =>
                           updateSettings({ sourceLanguage: e.target.value })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                       >
                         <option value="en">English</option>
                         <option value="zh">Chinese (Simplified)</option>
@@ -201,7 +201,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="targetLanguage" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="targetLanguage" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                         Target Language
                       </label>
                       <select
@@ -210,7 +210,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                         onChange={(e) =>
                           updateSettings({ targetLanguage: e.target.value })
                         }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                       >
                         <option value="zh">Chinese (Simplified)</option>
                         <option value="zh-TW">Chinese (Traditional)</option>
@@ -227,12 +227,12 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Spaced Repetition Settings
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <div>
-                      <label htmlFor="dailyReviewGoal" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="dailyReviewGoal" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                         Daily Review Goal
                       </label>
                       <input
@@ -242,14 +242,14 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                         max="100"
                         value={dailyReviewGoal}
                         onChange={(e) => setDailyReviewGoal(Number.parseInt(e.target.value) || 20)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Number of words to review each day
                       </p>
                     </div>
                     <div>
-                      <label htmlFor="easyBonus" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="easyBonus" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                         Easy Card Bonus
                       </label>
                       <input
@@ -260,14 +260,14 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                         step="0.1"
                         value={easyBonus}
                         onChange={(e) => setEasyBonus(Number.parseFloat(e.target.value) || 1.3)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Multiplier for easy cards (default: 1.3)
                       </p>
                     </div>
                     <div>
-                      <label htmlFor="intervalModifier" className="block text-sm font-medium text-gray-700 mb-2">
+                      <label htmlFor="intervalModifier" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                         Interval Modifier
                       </label>
                       <input
@@ -278,7 +278,7 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                         step="0.1"
                         value={intervalModifier}
                         onChange={(e) => setIntervalModifier(Number.parseFloat(e.target.value) || 1)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Multiplier for all intervals (default: 1.0)
@@ -291,25 +291,25 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
 
             {/* Data Management */}
             {activeTab === "data" && (
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Export/Import Data
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                     Back up your vocabulary data or restore from a backup file
                   </p>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
                     <button
                       onClick={handleExport}
                       disabled={vocabulary.length === 0}
-                      className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center space-x-2 bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
-                      <Download className="w-5 h-5" />
+                      <Download className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Export Data</span>
                     </button>
-                    <label className="flex items-center space-x-2 bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors cursor-pointer">
-                      <Upload className="w-5 h-5" />
+                    <label className="flex items-center space-x-2 bg-white border border-gray-300 text-gray-700 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors cursor-pointer text-sm sm:text-base">
+                      <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Import Data</span>
                       <input
                         type="file"
@@ -321,54 +321,54 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
                   </div>
                 </div>
 
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="border-t pt-4 sm:pt-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     Statistics
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-2xl font-bold text-gray-900">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900">
                         {vocabulary.length}
                       </p>
-                      <p className="text-sm text-gray-600">Total Words</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Total Words</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-2xl font-bold text-gray-900">
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900">
                         {vocabulary.filter((v) => v.tags.length > 0).length}
                       </p>
-                      <p className="text-sm text-gray-600">Tagged</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Tagged</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-2xl font-bold text-gray-900">
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900">
                         {
                           new Set(vocabulary.flatMap((v) => v.tags)).size
                         }
                       </p>
-                      <p className="text-sm text-gray-600">Tags</p>
+                      <p className="text-xs sm:text-sm text-gray-600">Tags</p>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <p className="text-2xl font-bold text-gray-900">
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900">
                         {vocabulary.filter((v) => v.exampleSentences.length > 0).length}
                       </p>
-                      <p className="text-sm text-gray-600">With Examples</p>
+                      <p className="text-xs sm:text-sm text-gray-600">With Examples</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t pt-6">
-                  <h3 className="text-lg font-semibold text-red-600 mb-4">
+                <div className="border-t pt-4 sm:pt-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-red-600 mb-3 sm:mb-4">
                     Danger Zone
                   </h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
                     Actions here cannot be undone
                   </p>
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
                     <button
                       onClick={handleClearData}
                       disabled={vocabulary.length === 0}
-                      className="flex items-center space-x-2 border border-red-300 text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center space-x-2 border border-red-300 text-red-600 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span>Clear All Data</span>
                     </button>
                   </div>
@@ -378,26 +378,26 @@ export default function SettingsPage({ params }: { params: Promise<{ lang: strin
 
             {/* Sync */}
             {activeTab === "sync" && (
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <SyncPanel role="receiver" />
               </div>
             )}
 
             {/* Save/Reset buttons */}
-            <div className="border-t bg-gray-50 p-6">
-              <div className="flex flex-wrap gap-4 justify-end">
+            <div className="border-t bg-gray-50 p-4 sm:p-6">
+              <div className="flex flex-wrap gap-3 sm:gap-4 justify-end">
                 <button
                   onClick={handleReset}
-                  className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+                  className="flex items-center space-x-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors text-sm sm:text-base"
                 >
-                  <RotateCcw className="w-5 h-5" />
+                  <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Reset to Defaults</span>
                 </button>
                 <button
                   onClick={handleSave}
-                  className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 >
-                  <Save className="w-5 h-5" />
+                  <Save className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>Save Settings</span>
                 </button>
               </div>

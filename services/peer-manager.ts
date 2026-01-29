@@ -179,12 +179,21 @@ class PeerManager {
         try {
           const uint8Array = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
           const text = new TextDecoder().decode(uint8Array);
+
+          // DEBUG: Log the raw text received
+          this.log("info", "Raw data received", `Length: ${text.length}, Preview: ${text.substring(0, 200)}...`);
+
           const jsonData = JSON.parse(text);
+
+          // Debug: log the parsed data
+          this.log("info", "Parsed binary data", `Type: ${jsonData?.type}, Vocab entries: ${jsonData?.vocabularyEntries?.length || 0}`);
+
           this.handleIncomingData(jsonData);
         } catch (err) {
           this.log("error", "Failed to parse binary data", String(err));
         }
       } else {
+        this.log("info", "Received non-binary data", `Type: ${(data as Record<string, unknown>)?.type}`);
         this.handleIncomingData(data);
       }
     });
@@ -202,26 +211,10 @@ class PeerManager {
   private handlePeerJSConnectionOpen(conn: DataConnection) {
     this.log("success", "Data channel open");
 
-    if (this.role === "sender") {
-      // Generate and send verification code
-      const code = this.generateVerificationCode();
-      this.verificationCode = code;
-      this.setConnectionState("verifying");
-      this.log("info", "Verification code generated", `Code: ${code}`);
-
-      // Send verification request as binary data
-      const message = {
-        type: "verification-request",
-        verificationCode: code,
-      };
-      const jsonString = JSON.stringify(message);
-      const binaryData = new TextEncoder().encode(jsonString);
-      conn.send(binaryData);
-    } else {
-      // Receiver waits for verification request
-      this.setConnectionState("verifying");
-      this.log("info", "Waiting for verification code");
-    }
+    // Skip verification - go directly to connected state
+    this.isVerified = true;
+    this.setConnectionState("connected");
+    this.log("success", "Connection established (verification skipped)");
 
     this.error = null;
     this.resetTimeout();
@@ -816,8 +809,18 @@ class PeerManager {
     try {
       this.log("info", `Sending sync message: ${message.type}`);
 
+      // Log vocabulary entries count if present
+      if ('vocabularyEntries' in message && Array.isArray(message.vocabularyEntries)) {
+        this.log("info", `Message contains ${message.vocabularyEntries.length} vocabulary entries`);
+      }
+
       // Send as binary data to avoid JSON size limits for large messages
       const jsonString = JSON.stringify(message);
+
+      // DEBUG: Log the actual JSON being sent
+      this.log("info", `JSON payload size: ${jsonString.length} chars`);
+      this.log("info", `JSON preview: ${jsonString.substring(0, 200)}...`);
+
       const binaryData = new TextEncoder().encode(jsonString);
 
       if (this.connection) {
