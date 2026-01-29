@@ -51,7 +51,10 @@
     "clearFiltersBtn": "Clear filters",
     "speakError": "Failed to speak word",
     "pronunciationError": "Failed to play pronunciation",
-    "deleteError": "Failed to delete word"
+    "deleteError": "Failed to delete word",
+    "showing": "Showing {{start}}-{{end}} of {{total}}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
   },
   "translate": {
     "enterText": "Please enter text to translate",

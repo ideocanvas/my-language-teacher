@@ -15,6 +15,8 @@ import {
   Trash2,
   Edit,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
@@ -22,6 +24,8 @@ import { getTranslations, type Locale } from "@/lib/client-i18n";
 interface VocabularyListClientProps {
   readonly lang: Locale;
 }
+
+const ITEMS_PER_PAGE = 20;
 
 export function VocabularyListClient({ lang }: VocabularyListClientProps) {
   const router = useRouter();
@@ -32,6 +36,7 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedDifficulty, setSelectedDifficulty] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const allTags = getAllTags();
 
@@ -84,22 +89,32 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
     return true;
   });
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const toggleDifficulty = (difficulty: number) => {
-    setSelectedDifficulty((prev) =>
-      prev.includes(difficulty) ? prev.filter((d) => d !== difficulty) : [...prev, difficulty]
-    );
-  };
 
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedTags([]);
     setSelectedDifficulty([]);
+    setCurrentPage(1);
+  };
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleToggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+    setCurrentPage(1);
+  };
+
+  const handleToggleDifficulty = (difficulty: number) => {
+    setSelectedDifficulty((prev) =>
+      prev.includes(difficulty) ? prev.filter((d) => d !== difficulty) : [...prev, difficulty]
+    );
+    setCurrentPage(1);
   };
 
   const hasFilters = searchQuery || selectedTags.length > 0 || selectedDifficulty.length > 0;
@@ -152,7 +167,7 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                 type="text"
                 placeholder={t("vocabulary.searchPlaceholder")}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
               />
             </div>
@@ -192,7 +207,7 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                     {allTags.map((tag) => (
                       <button
                         key={tag}
-                        onClick={() => toggleTag(tag)}
+                        onClick={() => handleToggleTag(tag)}
                         className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                           selectedTags.includes(tag)
                             ? "bg-blue-600 text-white"
@@ -213,7 +228,7 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                   {[1, 2, 3, 4, 5].map((level) => (
                     <button
                       key={level}
-                      onClick={() => toggleDifficulty(level)}
+                      onClick={() => handleToggleDifficulty(level)}
                       className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                         selectedDifficulty.includes(level)
                           ? getDifficultyColor(level)
@@ -272,9 +287,14 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
               </div>
             );
           }
+          // Pagination logic
+          const totalPages = Math.ceil(filteredVocabulary.length / ITEMS_PER_PAGE);
+          const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+          const paginatedVocabulary = filteredVocabulary.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
           return (
           <div className="space-y-3 sm:space-y-4">
-            {filteredVocabulary.map((entry) => {
+            {paginatedVocabulary.map((entry) => {
               const daysUntilReview = getDaysUntilReview(entry.srsData);
               const isDue = daysUntilReview === 0;
 
@@ -371,6 +391,39 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                 </div>
               );
             })}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 mt-4">
+                <div className="text-sm text-gray-600">
+                  {t("vocabulary.showing")?.replace("{{start}}", (startIndex + 1).toString())
+                    ?.replace("{{end}}", Math.min(startIndex + ITEMS_PER_PAGE, filteredVocabulary.length).toString())
+                    ?.replace("{{total}}", filteredVocabulary.length.toString())
+                    || `Showing ${startIndex + 1}-${Math.min(startIndex + ITEMS_PER_PAGE, filteredVocabulary.length)} of ${filteredVocabulary.length}`}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label={t("vocabulary.previousPage") || "Previous page"}
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-medium text-gray-700 px-2">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label={t("vocabulary.nextPage") || "Next page"}
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           );
         })()}
