@@ -4,6 +4,7 @@ declare global {
     LLM_API_KEY?: string;
     LLM_MODEL?: string;
     VISION_MODEL?: string;
+    DEBUG?: string;
     SHORT_CODES?: KVNamespace;
   }
 }

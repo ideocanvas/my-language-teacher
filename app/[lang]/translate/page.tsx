@@ -266,11 +266,11 @@ export default function TranslatePage({ params }: { params: Promise<{ lang: stri
       }
 
       const data = await response.json();
-      if (data.text) {
-        setSourceText(data.text);
+      if (data.text && data.text.trim()) {
+        setSourceText(data.text.trim());
         toast.success("Text extracted from image!");
       } else {
-        toast.info("No text found in the image");
+        toast.info("No text found in the image. Try again with clearer text.");
       }
     } catch (err) {
       console.error("Text extraction failed:", err);
