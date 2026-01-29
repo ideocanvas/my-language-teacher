@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     // Get the Cloudflare context
     const { env } = getCloudflareContext();
 
-    // @ts-expect-error - Cloudflare KV binding
     const SHORT_CODES: KVNamespace = env.SHORT_CODES;
 
     if (!SHORT_CODES) {
@@ -100,7 +99,6 @@ export async function GET(request: NextRequest) {
     // Get the Cloudflare context
     const { env } = getCloudflareContext();
 
-    // @ts-expect-error - Cloudflare KV binding
     const SHORT_CODES: KVNamespace = env.SHORT_CODES;
 
     if (!SHORT_CODES) {
@@ -149,7 +147,6 @@ export async function DELETE(request: NextRequest) {
     // Get the Cloudflare context
     const { env } = getCloudflareContext();
 
-    // @ts-expect-error - Cloudflare KV binding
     const SHORT_CODES: KVNamespace = env.SHORT_CODES;
 
     if (!SHORT_CODES) {
