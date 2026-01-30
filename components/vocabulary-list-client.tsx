@@ -17,6 +17,7 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
@@ -62,6 +63,16 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
     }
   };
 
+  const handleGoogleTranslate = (word: string) => {
+    // Determine source and target languages based on UI language
+    // If UI is zh, assume translating from Chinese to English
+    // If UI is en, assume translating from English to Chinese
+    const sourceLang = lang === "zh" ? "zh-CN" : "en";
+    const targetLang = lang === "zh" ? "en" : "zh-CN";
+    const url = `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(word)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   // Filter vocabulary
   const filteredVocabulary = vocabulary.filter((entry) => {
     // Search filter
@@ -87,7 +98,7 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
     }
 
     return true;
-  });
+  }).sort((a, b) => b.createdAt - a.createdAt);
 
 
   const clearFilters = () => {
@@ -372,6 +383,13 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
 
                     {/* Actions */}
                     <div className="flex space-x-1 sm:space-x-2 sm:ml-4">
+                      <button
+                        onClick={() => handleGoogleTranslate(entry.word)}
+                        className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Google Translate"
+                      >
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
                       <button
                         onClick={() => router.push(`/${lang}/vocabulary/${entry.id}`)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
