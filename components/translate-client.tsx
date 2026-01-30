@@ -59,7 +59,9 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
   const speakText = async (text: string, langCode: string) => {
     try {
       const { speakText: ttsSpeakText } = await import("@/lib/tts-utils");
-      await ttsSpeakText(text, langCode === "zh" ? "zh-CN" : "en-US");
+      // Check if the language code is Chinese (zh, zh-CN, zh-TW, etc.)
+      const isChinese = langCode.startsWith("zh");
+      await ttsSpeakText(text, isChinese ? "zh-CN" : "en-US");
     } catch (err) {
       console.error("Failed to speak text:", err);
     }

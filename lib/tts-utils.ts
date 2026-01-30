@@ -179,6 +179,8 @@ export function getTTSManager(): TTSManager {
 // Convenience functions
 export async function speakText(text: string, lang: string = "en-US"): Promise<void> {
   const tts = getTTSManager();
+  console.log("TTSManager:", tts, "isSupported:", tts.isSupported());
+  console.log("speakText:", text, "lang:", lang);
   if (!tts.isSupported()) {
     throw new Error("Text-to-speech is not supported in this browser");
   }
