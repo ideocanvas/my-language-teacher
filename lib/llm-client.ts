@@ -349,10 +349,46 @@ Provide accurate translation and helpful metadata for language learners. Use sta
           { role: "user", content: prompt },
         ],
         temperature: 0.3,
-        maxTokens: 800,
+        maxTokens: 3000,
       });
 
-      const parsed = JSON.parse(response);
+      // Check for incomplete or empty responses
+      if (!response || response.trim().length === 0) {
+        console.error("Empty response from LLM");
+        throw new Error("Empty response from LLM");
+      }
+
+      // Check if response appears truncated (starts with { but doesn't end with })
+      const trimmedResponse = response.trim();
+      if (trimmedResponse.startsWith('{') && !trimmedResponse.endsWith('}')) {
+        console.error("Response appears truncated:", response.substring(0, 200));
+        throw new Error("LLM response appears truncated");
+      }
+
+      // Try to parse JSON, handling potential markdown code blocks or malformed responses
+      let parsed;
+      try {
+        parsed = JSON.parse(response);
+      } catch (parseError) {
+        console.error("Initial JSON parse failed. Raw response:", response);
+        
+        // Try to extract valid JSON from response with markdown code blocks
+        const jsonMatch = /\{[\s\S]*\}/.exec(response);
+        if (jsonMatch) {
+          const extractedJson = jsonMatch[0];
+          console.error("Extracted JSON:", extractedJson);
+          try {
+            parsed = JSON.parse(extractedJson);
+          } catch (extractionError) {
+            console.error("Failed to parse extracted JSON:", extractedJson);
+            throw parseError;
+          }
+        } else {
+          console.error("No valid JSON found in response. Response length:", response.length);
+          console.error("Response preview:", response.substring(0, 500));
+          throw parseError;
+        }
+      }
       return {
         translatedText: parsed.translatedText || text,
         pronunciation: parsed.pronunciation || undefined,
