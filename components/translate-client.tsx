@@ -58,8 +58,8 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
 
   const speakText = async (text: string, langCode: string) => {
     try {
-      const { speakText } = await import("@/lib/tts-utils");
-      await speakText(text, langCode === "zh" ? "zh-CN" : "en-US");
+      const { speakText: ttsSpeakText } = await import("@/lib/tts-utils");
+      await ttsSpeakText(text, langCode === "zh" ? "zh-CN" : "en-US");
     } catch (err) {
       console.error("Failed to speak text:", err);
     }
@@ -67,7 +67,13 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
 
   // Normalize text for consistent storage and duplicate detection
   const normalizeText = (text: string): string => {
-    return text.trim().toLowerCase().replace(/\s+/g, " ");
+    return text
+      .trim()
+      .toLowerCase()
+      // Replace multiple whitespace with single space
+      .replace(/\s+/g, " ")
+      // Remove trailing punctuation (.,!?;:)
+      .replace(/[.,!?;:]+$/, "");
   };
 
   const handleTranslate = async () => {
@@ -80,11 +86,13 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
     const normalizedInput = normalizeText(sourceText);
 
     // Check if already exists (using normalized comparison)
-    const exists = vocabulary.some(
+    const existingWord = vocabulary.find(
       (v) => normalizeText(v.word) === normalizedInput
     );
 
-    if (exists) {
+    if (existingWord) {
+      // Show the existing translation
+      setTargetText(existingWord.translation);
       toast.info(t("translate.alreadyExists"));
       return;
     }
@@ -128,8 +136,10 @@ export function TranslateClient({ lang }: Readonly<TranslateClientProps>) {
         }
       } else {
         // Single word translation - auto-save
+        // Clean up trailing punctuation from the word
+        const cleanedWord = normalizeText(sourceText);
         await addWord({
-          word: sourceText.trim(),
+          word: cleanedWord,
           translation: data.translatedText.trim(),
           pronunciation: data.pronunciation || undefined,
           partOfSpeech: data.partOfSpeech || undefined,
