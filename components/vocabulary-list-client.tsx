@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppNavigation } from "@/components/app-navigation";
 import BuyMeACoffee from "@/components/BuyMeACoffee";
 import { useVocabulary } from "@/hooks/use-vocabulary";
+import { useSettings } from "@/hooks/use-settings";
 import { getDaysUntilReview } from "@/lib/srs-algorithm";
 import {
   Search,
@@ -31,6 +32,7 @@ const ITEMS_PER_PAGE = 20;
 export function VocabularyListClient({ lang }: VocabularyListClientProps) {
   const router = useRouter();
   const { vocabulary, loading, deleteWord, getAllTags } = useVocabulary();
+  const { settings } = useSettings();
   const t = useMemo(() => getTranslations(lang), [lang]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -64,11 +66,9 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
   };
 
   const handleGoogleTranslate = (word: string) => {
-    // Determine source and target languages based on UI language
-    // If UI is zh, assume translating from Chinese to English
-    // If UI is en, assume translating from English to Chinese
-    const sourceLang = lang === "zh" ? "zh-CN" : "en";
-    const targetLang = lang === "zh" ? "en" : "zh-CN";
+    // Use user's language settings for translation direction
+    const sourceLang = settings?.sourceLanguage || "en";
+    const targetLang = settings?.targetLanguage || "zh";
     const url = `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(word)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
