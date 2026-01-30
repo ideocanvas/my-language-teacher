@@ -19,6 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Book,
+  GitCompare,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getTranslations, type Locale } from "@/lib/client-i18n";
@@ -40,6 +44,10 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
   const [selectedDifficulty, setSelectedDifficulty] = useState<number[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // AI shortcut states
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const allTags = getAllTags();
 
@@ -71,6 +79,56 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
     const targetLang = settings?.targetLanguage || "zh";
     const url = `https://translate.google.com/?sl=${sourceLang}&tl=${targetLang}&text=${encodeURIComponent(word)}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // AI shortcut functions
+  const toggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleGenerateSentences = (entry: typeof vocabulary[0]) => {
+    const params = new Array<{ key: string; value: string }>();
+    params.push({ key: "feature", value: "sentences" });
+    params.push({ key: "word", value: entry.word });
+    params.push({ key: "translation", value: entry.translation });
+    params.push({ key: "difficulty", value: entry.difficulty.toString() });
+    const queryString = params.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join("&");
+    router.push(`/${lang}/ai?${queryString}`);
+  };
+
+  const handleCompareWords = () => {
+    if (selectedIds.size < 2) {
+      toast.error(t("vocabulary.selectAtLeastTwo") || "Select at least 2 words to compare");
+      return;
+    }
+    const selectedEntries = vocabulary.filter((v) => selectedIds.has(v.id));
+    const words = selectedEntries.map((v) => v.word).join(",");
+    const params = new Array<{ key: string; value: string }>();
+    params.push({ key: "feature", value: "compare" });
+    params.push({ key: "words", value: words });
+    const queryString = params.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join("&");
+    router.push(`/${lang}/ai?${queryString}`);
+  };
+
+  const selectAllVisible = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const visibleIds = filteredVocabulary
+      .slice(startIndex, startIndex + ITEMS_PER_PAGE)
+      .map((v) => v.id);
+    setSelectedIds(new Set(visibleIds));
   };
 
   // Filter vocabulary
@@ -315,6 +373,18 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                   className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:border-blue-300 transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    {/* Checkbox for selection mode */}
+                    {selectionMode && (
+                      <div className="flex items-start">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(entry.id)}
+                          onChange={() => toggleSelection(entry.id)}
+                          className="w-5 h-5 mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          aria-label={`Select ${entry.word}`}
+                        />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       {/* Word and pronunciation */}
                       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -384,6 +454,24 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
                     {/* Actions */}
                     <div className="flex space-x-1 sm:space-x-2 sm:ml-4">
                       <button
+                        onClick={() => handleGenerateSentences(entry)}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title={t("vocabulary.generateSentences") || "Generate Sentences"}
+                      >
+                        <Book className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                      <button
+                        onClick={toggleSelectionMode}
+                        className={`p-2 rounded-lg transition-colors ${
+                          selectionMode
+                            ? "text-green-600 bg-green-50"
+                            : "text-gray-600 hover:text-green-600 hover:bg-green-50"
+                        }`}
+                        title={t("vocabulary.compareWords") || "Compare Words"}
+                      >
+                        <GitCompare className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                      <button
                         onClick={() => handleGoogleTranslate(entry.word)}
                         className="p-2 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                         title="Google Translate"
@@ -445,6 +533,41 @@ export function VocabularyListClient({ lang }: VocabularyListClientProps) {
           </div>
           );
         })()}
+
+        {/* Bulk Action Bar for Selection Mode */}
+        {selectionMode && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg p-4 z-50">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center space-x-4">
+                <span className="font-medium text-gray-900">
+                  {(t("vocabulary.selectedCount") || "{{count}} selected").replace("{{count}}", selectedIds.size.toString())}
+                </span>
+                <button
+                  onClick={selectAllVisible}
+                  className="text-blue-600 hover:text-blue-700 text-sm"
+                >
+                  {t("vocabulary.selectAll") || "Select All"}
+                </button>
+              </div>
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <button
+                  onClick={handleCompareWords}
+                  disabled={selectedIds.size < 2}
+                  className="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <GitCompare className="w-4 h-4" />
+                  <span>{(t("vocabulary.compareSelected") || "Compare Selected ({{count}})").replace("{{count}}", selectedIds.size.toString())}</span>
+                </button>
+                <button
+                  onClick={toggleSelectionMode}
+                  className="px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-100"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <BuyMeACoffee language={lang === "zh" ? "zh-TW" : "en"} />

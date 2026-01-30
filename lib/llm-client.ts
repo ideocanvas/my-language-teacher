@@ -109,7 +109,7 @@ export class LLMClient {
       difficultyDescription = "moderately challenging";
     }
 
-    const prompt = `Generate 3 example sentences for the word "${word}" (${translation}). 
+    const prompt = `Generate 3 example sentences for the word "${word}" (${translation}).
 Return a JSON object with this format:
 {
   "sentences": [
@@ -133,7 +133,37 @@ Make the sentences ${difficultyDescription}.`;
         maxTokens: 500,
       });
 
-      const parsed = JSON.parse(response);
+      // Check for empty responses
+      if (!response || response.trim().length === 0) {
+        console.error("Empty response from LLM for generateExampleSentences");
+        throw new Error("Empty response from LLM");
+      }
+
+      // Try to parse JSON, handling potential markdown code blocks or malformed responses
+      let parsed;
+      try {
+        parsed = JSON.parse(response);
+      } catch (parseError) {
+        console.error("Initial JSON parse failed for generateExampleSentences. Raw response:", response);
+
+        // Try to extract valid JSON from response with markdown code blocks
+        const jsonMatch = /\{[\s\S]*\}/.exec(response);
+        if (jsonMatch) {
+          const extractedJson = jsonMatch[0];
+          console.error("Extracted JSON:", extractedJson);
+          try {
+            parsed = JSON.parse(extractedJson);
+          } catch (extractionError) {
+            console.error("Failed to parse extracted JSON:", extractedJson);
+            throw parseError;
+          }
+        } else {
+          console.error("No valid JSON found in response. Response length:", response.length);
+          console.error("Response preview:", response.substring(0, 500));
+          throw parseError;
+        }
+      }
+
       return {
         word,
         sentences: parsed.sentences || [],
@@ -176,7 +206,37 @@ Focus on nuances in meaning, usage, and context.`;
         maxTokens: 800,
       });
 
-      const parsed = JSON.parse(response);
+      // Check for empty responses
+      if (!response || response.trim().length === 0) {
+        console.error("Empty response from LLM for compareWords");
+        throw new Error("Empty response from LLM");
+      }
+
+      // Try to parse JSON, handling potential markdown code blocks or malformed responses
+      let parsed;
+      try {
+        parsed = JSON.parse(response);
+      } catch (parseError) {
+        console.error("Initial JSON parse failed for compareWords. Raw response:", response);
+
+        // Try to extract valid JSON from response with markdown code blocks
+        const jsonMatch = /\{[\s\S]*\}/.exec(response);
+        if (jsonMatch) {
+          const extractedJson = jsonMatch[0];
+          console.error("Extracted JSON:", extractedJson);
+          try {
+            parsed = JSON.parse(extractedJson);
+          } catch (extractionError) {
+            console.error("Failed to parse extracted JSON:", extractedJson);
+            throw parseError;
+          }
+        } else {
+          console.error("No valid JSON found in response. Response length:", response.length);
+          console.error("Response preview:", response.substring(0, 500));
+          throw parseError;
+        }
+      }
+
       return {
         words,
         differences: parsed.differences || [],

@@ -54,7 +54,15 @@
     "deleteError": "删除单词失败",
     "showing": "显示 {{start}}-{{end}} / {{total}}",
     "previousPage": "上一页",
-    "nextPage": "下一页"
+    "nextPage": "下一页",
+    "generateSentences": "生成例句",
+    "compareWords": "对比单词",
+    "selectToCompare": "选择要对比的单词",
+    "selectedCount": "已选择 {{count}} 个",
+    "selectAtLeastTwo": "至少选择 2 个单词进行对比",
+    "selectAll": "全选",
+    "compareSelected": "对比已选 ({{count}})",
+    "cancelSelection": "取消"
   },
   "translate": {
     "enterText": "请输入要翻译的文本",

@@ -16,8 +16,9 @@ import {
     X,
     MessageCircle
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 type AIFeature = "chat" | "sentences" | "compare" | "pronunciation";
 
@@ -27,6 +28,7 @@ interface AIClientProps {
 
 export function AIClient({ lang }: AIClientProps) {
   const t = useMemo(() => getTranslations(lang), [lang]);
+  const searchParams = useSearchParams();
 
   const [activeFeature, setActiveFeature] = useState<AIFeature>("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -38,6 +40,26 @@ export function AIClient({ lang }: AIClientProps) {
   const [translationInput, setTranslationInput] = useState("");
   const [compareWords, setCompareWords] = useState<string[]>([]);
   const [compareWordInput, setCompareWordInput] = useState("");
+
+  // Parse URL parameters on mount to pre-fill data from vocabulary list
+  useEffect(() => {
+    const feature = searchParams.get("feature");
+
+    if (feature === "sentences") {
+      setActiveFeature("sentences");
+      const word = searchParams.get("word") || "";
+      const translation = searchParams.get("translation") || "";
+      setWordInput(word);
+      setTranslationInput(translation);
+    } else if (feature === "compare") {
+      setActiveFeature("compare");
+      const words = searchParams.get("words");
+      if (words) {
+        const wordList = words.split(",").map(w => w.trim()).filter(w => w.length > 0);
+        setCompareWords(wordList);
+      }
+    }
+  }, [searchParams]);
 
   const handleSendMessage = async () => {
     if (!input.trim()) return;

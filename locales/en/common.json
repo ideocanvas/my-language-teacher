@@ -54,7 +54,15 @@
     "deleteError": "Failed to delete word",
     "showing": "Showing {{start}}-{{end}} of {{total}}",
     "previousPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "generateSentences": "Generate Sentences",
+    "compareWords": "Compare Words",
+    "selectToCompare": "Select words to compare",
+    "selectedCount": "{{count}} selected",
+    "selectAtLeastTwo": "Select at least 2 words to compare",
+    "selectAll": "Select All",
+    "compareSelected": "Compare Selected ({{count}})",
+    "cancelSelection": "Cancel"
   },
   "translate": {
     "enterText": "Please enter text to translate",
